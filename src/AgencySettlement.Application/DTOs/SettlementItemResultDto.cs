@@ -37,4 +37,6 @@
     public decimal DebitAmount { get; set; }
 
     public decimal CreditAmount { get; set; }
+
+    public string PersianExecutionDate { get; set; } = string.Empty;
 }

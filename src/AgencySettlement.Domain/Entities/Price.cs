@@ -16,7 +16,7 @@ public class Price
 
     public decimal Amount { get; set; }
 
-    public string PersianExecutionDate { get; set; }
+    public string PersianExecutionDate { get; set; } = string.Empty;
 
     public bool IsActive { get; set; }
 }

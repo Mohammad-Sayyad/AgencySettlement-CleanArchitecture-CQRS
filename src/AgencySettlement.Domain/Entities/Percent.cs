@@ -6,7 +6,7 @@
 
     public int ExamModeId { get; set; }
 
-    public string PersianExecutionDate { get; set; }
+    public string PersianExecutionDate { get; set; } = string.Empty;
     public decimal AgencyPercent { get; set; }
 
     public decimal GajPercent { get; set; }

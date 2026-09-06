@@ -13,4 +13,10 @@ public sealed class SettlementResultDto
     public decimal Balance { get; set; }
 
     public List<SettlementItemResultDto> Items { get; set; } = [];
+
+    public decimal TotalDebitGaj { get; set; }
+
+    public decimal TotalCreditGaj { get; set; }
+
+    public string PersianExecutionDate { get; set; } = string.Empty;
 }

@@ -44,6 +44,10 @@ namespace AgencySettlement.Infrastructure.Persistence.Configurations
             builder.Property(x => x.CreditAmount)
                 .HasPrecision(19, 4);
 
+            builder.Property(x => x.PersianExecutionDate)
+    .HasMaxLength(20)
+    .IsRequired();
+
             builder.Property(x => x.FreeCandidateCount)
                 .IsRequired();
 

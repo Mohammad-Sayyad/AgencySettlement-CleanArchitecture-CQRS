@@ -24,5 +24,9 @@ namespace AgencySettlement.Domain.Entities
         public DateTime CreatedAt { get; set; }
 
         public List<SettlementItem> Items { get; set; } = [];
+        public decimal TotalDebitGaj { get; set; }
+        public decimal TotalCreditGaj { get; set; }
+        public string PersianExecutionDate { get; set; } = string.Empty;
+
     }
 }

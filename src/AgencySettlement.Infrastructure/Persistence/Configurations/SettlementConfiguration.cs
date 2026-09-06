@@ -37,6 +37,16 @@ namespace AgencySettlement.Infrastructure.Persistence.Configurations
                 .HasForeignKey(x => x.SettlementId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            builder.Property(x => x.TotalDebitGaj)
+    .HasPrecision(19, 4);
+
+            builder.Property(x => x.TotalCreditGaj)
+                .HasPrecision(19, 4);
+
+            builder.Property(x => x.PersianExecutionDate)
+                .HasMaxLength(20)
+                .IsRequired();
+
             builder.HasIndex(x => new
             {
                 x.AgencyId,

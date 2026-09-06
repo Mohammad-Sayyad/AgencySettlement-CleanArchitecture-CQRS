@@ -33,6 +33,15 @@ namespace AgencySettlement.Infrastructure.Persistence.Configurations
 
             builder.Property(x => x.CreatedAt)
                 .IsRequired();
+            builder.Property(x => x.TotalDebitGaj)
+    .HasPrecision(19, 4);
+
+            builder.Property(x => x.TotalCreditGaj)
+                .HasPrecision(19, 4);
+
+            builder.Property(x => x.PersianExecutionDate)
+                .HasMaxLength(20)
+                .IsRequired();
 
             builder.HasIndex(x => new
             {

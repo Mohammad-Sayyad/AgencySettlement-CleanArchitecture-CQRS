@@ -7,6 +7,7 @@ using MediatR;
 
 namespace AgencySettlement.Application.Settlements.Commands;
 
+
 public sealed class CalculateSettlementCommandHandler
     : IRequestHandler<CalculateSettlementCommand, SettlementResultDto>
 {
@@ -164,62 +165,35 @@ public sealed class CalculateSettlementCommandHandler
             settlement.Items.Add(
                 new SettlementItem
                 {
-                    PackageId =
-                        group.Key.PackageId,
+                    PackageId = group.Key.PackageId,
+                    EducationalLevelId = group.Key.EducationalLevelId,
 
-                    EducationalLevelId =
-                        group.Key.EducationalLevelId,
+                    ExamModeId = group.Key.ExamModeId,
+                    RegistrationPlanId = group.Key.RegistrationPlanId,
+                    YearId = group.Key.YearId,
 
-                    ExamModeId =
-                        group.Key.ExamModeId,
+                    PersianExecutionDate =
+                        price.PersianExecutionDate,
 
-                    RegistrationPlanId =
-                        group.Key.RegistrationPlanId,
+                    CandidateCount = candidateCount,
+                    FreeCandidateCount = quotaCount,
+                    PaidCandidateCount = candidateCount,
 
-                    YearId =
-                        group.Key.YearId,
+                    UnitPrice = price.Amount,
+                    BaseAmount = baseAmount,
 
-                    CandidateCount =
-                        candidateCount,
+                    AgencyPercent = percent.AgencyPercent,
+                    GajPercent = percent.GajPercent,
+                    StudentPercent = percent.StudentPercent,
 
-                    FreeCandidateCount =
-                        quotaCount,
+                    AgencyAmount = agencyAmount,
+                    GajAmount = gajAmount,
+                    StudentAmount = studentAmount,
 
-                    PaidCandidateCount =
-                        candidateCount,
+                    DebitAmount = debitAmount,
+                    CreditAmount = creditAmount,
 
-                    UnitPrice =
-                        price.Amount,
-
-                    BaseAmount =
-                        baseAmount,
-
-                    AgencyPercent =
-                        percent.AgencyPercent,
-
-                    GajPercent =
-                        percent.GajPercent,
-
-                    StudentPercent =
-                        percent.StudentPercent,
-
-                    AgencyAmount =
-                        agencyAmount,
-
-                    GajAmount =
-                        gajAmount,
-
-                    StudentAmount =
-                        studentAmount,
-
-                    DebitAmount =
-                        debitAmount,
-
-                    CreditAmount =
-                        creditAmount,
-
-                    CreatedAt =
-                        DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow
                 });
         }
 
@@ -228,6 +202,10 @@ public sealed class CalculateSettlementCommandHandler
             throw new InvalidOperationException(
                 "هیچ ترکیبی دارای قیمت و درصد معتبر برای محاسبه نبود.");
         }
+
+        // -----------------------------
+        // Final Agency Amount
+        // -----------------------------
 
         var totalDebit =
             grossTotalDebit - totalDebitQuotaAmount;
@@ -245,6 +223,29 @@ public sealed class CalculateSettlementCommandHandler
             settlement.TotalDebit -
             settlement.TotalCredit;
 
+        // -----------------------------
+        // Gaj Contra Account
+        // -----------------------------
+
+        settlement.TotalDebitGaj =
+            settlement.TotalCredit;
+
+        settlement.TotalCreditGaj =
+            settlement.TotalDebit;
+
+        // -----------------------------
+        // Settlement Date
+        // -----------------------------
+
+        settlement.PersianExecutionDate =
+            settlement.Items
+                .Select(x => x.PersianExecutionDate)
+                .FirstOrDefault() ?? string.Empty;
+
+        // -----------------------------
+        // Save Settlement
+        // -----------------------------
+
         await _settlementRepository.AddAsync(
             settlement,
             cancellationToken);
@@ -252,25 +253,31 @@ public sealed class CalculateSettlementCommandHandler
         await _settlementRepository.SaveChangesAsync(
             cancellationToken);
 
+        // -----------------------------
+        // History
+        // -----------------------------
+
         var history = new SettlementHistory
         {
-            SettlementId =
-                settlement.Id,
+            SettlementId = settlement.Id,
+            AgencyId = settlement.AgencyId,
+            YearId = settlement.YearId,
 
-            AgencyId =
-                settlement.AgencyId,
+            PersianExecutionDate =
+                settlement.PersianExecutionDate,
 
-            TotalDebit =
-                settlement.TotalDebit,
+            TotalDebit = settlement.TotalDebit,
+            TotalCredit = settlement.TotalCredit,
 
-            TotalCredit =
-                settlement.TotalCredit,
+            TotalDebitGaj =
+                settlement.TotalDebitGaj,
 
-            Balance =
-                settlement.Balance,
+            TotalCreditGaj =
+                settlement.TotalCreditGaj,
 
-            CreatedAt =
-                DateTime.UtcNow,
+            Balance = settlement.Balance,
+
+            CreatedAt = DateTime.UtcNow,
 
             Description =
                 "محاسبه Settlement نماینده"
@@ -350,80 +357,53 @@ public sealed class CalculateSettlementCommandHandler
     {
         return new SettlementResultDto
         {
-            SettlementId =
-                settlement.Id,
+            SettlementId = settlement.Id,
+            AgencyId = settlement.AgencyId,
 
-            AgencyId =
-                settlement.AgencyId,
+            PersianExecutionDate =
+                settlement.PersianExecutionDate,
 
-            TotalDebit =
-                settlement.TotalDebit,
+            TotalDebit = settlement.TotalDebit,
+            TotalCredit = settlement.TotalCredit,
+            Balance = settlement.Balance,
 
-            TotalCredit =
-                settlement.TotalCredit,
+            TotalDebitGaj =
+                settlement.TotalDebitGaj,
 
-            Balance =
-                settlement.Balance,
+            TotalCreditGaj =
+                settlement.TotalCreditGaj,
 
             Items = settlement.Items
                 .Select(x => new SettlementItemResultDto
                 {
-                    PackageId =
-                        x.PackageId,
+                    PackageId = x.PackageId,
+                    EducationalLevelId = x.EducationalLevelId,
+                    StudyFieldId = x.StudyFieldId,
 
-                    EducationalLevelId =
-                        x.EducationalLevelId,
+                    ExamModeId = x.ExamModeId,
+                    RegistrationPlanId = x.RegistrationPlanId,
+                    YearId = x.YearId,
 
-                    StudyFieldId =
-                        x.StudyFieldId,
+                    PersianExecutionDate =
+                        x.PersianExecutionDate,
 
-                    ExamModeId =
-                        x.ExamModeId,
+                    CandidateCount = x.CandidateCount,
+                    FreeCandidateCount = x.FreeCandidateCount,
+                    PaidCandidateCount = x.PaidCandidateCount,
 
-                    RegistrationPlanId =
-                        x.RegistrationPlanId,
+                    UnitPrice = x.UnitPrice,
+                    BaseAmount = x.BaseAmount,
 
-                    YearId =
-                        x.YearId,
+                    AgencyPercent = x.AgencyPercent,
+                    GajPercent = x.GajPercent,
+                    StudentPercent = x.StudentPercent,
 
-                    CandidateCount =
-                        x.CandidateCount,
+                    AgencyAmount = x.AgencyAmount,
+                    GajAmount = x.GajAmount,
+                    StudentAmount = x.StudentAmount,
 
-                    FreeCandidateCount =
-                        x.FreeCandidateCount,
-
-                    PaidCandidateCount =
-                        x.PaidCandidateCount,
-
-                    UnitPrice =
-                        x.UnitPrice,
-
-                    BaseAmount =
-                        x.BaseAmount,
-
-                    AgencyPercent =
-                        x.AgencyPercent,
-
-                    GajPercent =
-                        x.GajPercent,
-
-                    StudentPercent =
-                        x.StudentPercent,
-
-                    AgencyAmount =
-                        x.AgencyAmount,
-
-                    GajAmount =
-                        x.GajAmount,
-
-                    StudentAmount =
-                        x.StudentAmount,
-
-                    DebitAmount =
-                        x.DebitAmount,
-
-                    CreditAmount =
-                        x.CreditAmount
+                    DebitAmount = x.DebitAmount,
+                    CreditAmount = x.CreditAmount
                 })
                 .ToList()
         };

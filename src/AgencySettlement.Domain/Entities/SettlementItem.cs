@@ -50,5 +50,6 @@ namespace AgencySettlement.Domain.Entities
 
         public int FreeCandidateCount { get; set; }
         public int PaidCandidateCount { get; set; }
+        public string PersianExecutionDate { get; set; } = string.Empty;
     }
 }
