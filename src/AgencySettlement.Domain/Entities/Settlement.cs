@@ -27,6 +27,7 @@ namespace AgencySettlement.Domain.Entities
         public decimal TotalDebitGaj { get; set; }
         public decimal TotalCreditGaj { get; set; }
         public string PersianExecutionDate { get; set; } = string.Empty;
+        public decimal BalanceGaj { get; set; }
 
     }
 }

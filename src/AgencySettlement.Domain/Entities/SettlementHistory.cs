@@ -30,5 +30,6 @@ namespace AgencySettlement.Domain.Entities
 
         public decimal TotalCreditGaj { get; set; }
 
+        public decimal BalanceGaj { get; set; }
     }
 }

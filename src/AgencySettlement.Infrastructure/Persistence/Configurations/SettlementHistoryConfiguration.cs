@@ -42,6 +42,8 @@ namespace AgencySettlement.Infrastructure.Persistence.Configurations
             builder.Property(x => x.PersianExecutionDate)
                 .HasMaxLength(20)
                 .IsRequired();
+            builder.Property(x => x.BalanceGaj)
+    .HasPrecision(19, 4);
 
             builder.HasIndex(x => new
             {

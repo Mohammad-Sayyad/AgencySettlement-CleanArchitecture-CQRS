@@ -39,4 +39,5 @@
     public decimal CreditAmount { get; set; }
 
     public string PersianExecutionDate { get; set; } = string.Empty;
+    public decimal BalanceGaj { get; set; }
 }

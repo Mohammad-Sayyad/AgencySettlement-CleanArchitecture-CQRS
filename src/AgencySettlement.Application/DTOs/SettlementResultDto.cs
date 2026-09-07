@@ -17,6 +17,6 @@ public sealed class SettlementResultDto
     public decimal TotalDebitGaj { get; set; }
 
     public decimal TotalCreditGaj { get; set; }
-
+    public decimal BalanceGaj { get; set; }
     public string PersianExecutionDate { get; set; } = string.Empty;
 }
