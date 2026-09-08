@@ -1,4 +1,5 @@
 using AgencySettlement.Application.Abstractions.External;
+using AgencySettlement.Application.Abstractions.Persistence.ComboBoxRepository;
 using AgencySettlement.Application.Abstractions.Persistence.Repositories;
 using AgencySettlement.Application.ExternalExams.Commands.ImportExternalExams;
 using AgencySettlement.Infrastructure.External;
@@ -41,6 +42,21 @@ public static class DependencyInjection
         services.AddScoped<
             ISettlementHistoryRepository,
             SettlementHistoryRepository>();
+
+        services.AddScoped<
+    ISettlementDebtRepository,
+    SettlementDebtRepository>();
+
+        services.AddScoped<
+            ISettlementPaymentRepository,
+            SettlementPaymentRepository>();
+
+        services.AddScoped<
+            ISettlementReportRepository,
+            SettlementReportRepository>();
+        services.AddScoped<
+    ISettlementLookupRepository,
+    SettlementLookupRepository>();
 
         services.Configure<ExternalExamApiOptions>(
             configuration.GetSection("ExternalExamApi"));

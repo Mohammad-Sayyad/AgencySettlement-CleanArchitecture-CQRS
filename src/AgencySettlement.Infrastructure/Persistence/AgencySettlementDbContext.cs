@@ -1,3 +1,4 @@
+using AgencySettlement.Domain;
 using AgencySettlement.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,6 +23,8 @@ public sealed class AgencySettlementDbContext(DbContextOptions<AgencySettlementD
     public DbSet<ExternalExamRecord> ExternalExamRecords { get; set; }
     public DbSet<SettlementHistory> SettlementHistories { get; set; }
     public DbSet<ExamBooklet> ExamBooklets { get; set; }
+    public DbSet<Payment> Payments { get; set; }
+    public DbSet<ExamDate> ExamDates { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AgencySettlementDbContext).Assembly);
