@@ -201,5 +201,110 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                 TotalBalance = items.Sum(x => x.Balance)
             };
         }
+
+        public async Task<List<SettlementDetailItemDto>> GetSettlementDetailsAsync(
+     int agencyId,
+     int yearId,
+     string persianExecutionDate,
+     CancellationToken cancellationToken)
+        {
+            var items = await (
+                from item in _context.SettlementItems
+
+                join package in _context.Packages
+                    on item.PackageId equals package.Id
+
+                join educationalLevel in _context.EducationalLevels
+                    on item.EducationalLevelId equals educationalLevel.Id
+
+                join studyField in _context.StudyFields
+                    on item.StudyFieldId equals studyField.Id
+
+                join examMode in _context.ExamModes
+                    on item.ExamModeId equals examMode.Id
+
+                where item.AgencyId == agencyId
+                      && item.YearId == yearId
+                      && item.PersianExecutionDate == persianExecutionDate
+
+                orderby item.EducationalLevelId, item.StudyFieldId
+
+                select new SettlementDetailItemDto
+                {
+                    SettlementItemId = item.Id,
+
+                    PackageId = item.PackageId,
+                    PackageName = package.Name,
+
+                    ExamModeId = item.ExamModeId,
+                    ExamModeName = examMode.Name,
+
+                    EducationalLevelId = item.EducationalLevelId,
+                    EducationalLevelName = educationalLevel.Name,
+
+                    StudyFieldId = item.StudyFieldId,
+                    StudyFieldName = studyField.Name,
+
+                    CandidateCount = item.CandidateCount,
+                    FreeCandidateCount = item.FreeCandidateCount,
+                    PaidCandidateCount = item.PaidCandidateCount,
+
+                    UnitPrice = item.UnitPrice,
+                    BaseAmount = item.BaseAmount,
+
+                    DiscountPercent = item.GajPercent,
+
+                    DiscountAmount =
+                        item.BaseAmount * item.GajPercent / 100m,
+
+                    AgencyPercent = item.AgencyPercent,
+
+                    AgencyAmount =
+                        item.BaseAmount * item.AgencyPercent / 100m,
+
+                    CreditAmount =
+                        item.BaseAmount * item.AgencyPercent / 100m,
+
+                    TotalAmount =
+                        item.BaseAmount -
+                        (item.BaseAmount * item.GajPercent / 100m)
+                }
+            ).ToListAsync(cancellationToken);
+
+            foreach (var item in items)
+            {
+                item.StageTypeId = GetStageTypeId(
+                    item.EducationalLevelId);
+
+                item.StageTypeName = GetStageTypeName(
+                    item.EducationalLevelId);
+
+                item.Title =
+                    $"{item.ExamModeName} - " +
+                    $"{item.StageTypeName} - " +
+                    $"پایه {item.EducationalLevelName} - " +
+                    $"رشته {item.StudyFieldName}";
+            }
+
+            return items;
+        }
+
+        private static int GetStageTypeId(int educationalLevelId)
+            => educationalLevelId switch
+            {
+                >= 1 and <= 6 => 1,
+                >= 7 and <= 9 => 2,
+                >= 10 and <= 12 => 3,
+                _ => 0
+            };
+
+        private static string GetStageTypeName(int educationalLevelId)
+            => educationalLevelId switch
+            {
+                >= 1 and <= 6 => "ابتدایی توصیفی",
+                >= 7 and <= 9 => "متوسطه اول",
+                >= 10 and <= 12 => "متوسطه دوم",
+                _ => string.Empty
+            };
     }
 }

@@ -1,10 +1,15 @@
 using AgencySettlement.Application.Abstractions.External;
 using AgencySettlement.Application.Abstractions.Persistence.ComboBoxRepository;
 using AgencySettlement.Application.Abstractions.Persistence.Repositories;
+using AgencySettlement.Application.Abstractions.Persistence.UserRepository;
 using AgencySettlement.Application.ExternalExams.Commands.ImportExternalExams;
+using AgencySettlement.Domain.Entities;
 using AgencySettlement.Infrastructure.External;
 using AgencySettlement.Infrastructure.Persistence;
+using AgencySettlement.Infrastructure.Persistence.Authentication;
 using AgencySettlement.Infrastructure.Persistence.Repositories;
+using AgencySettlement.Infrastructure.Persistence.Repositories.UserRepositories;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,8 +24,18 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         services.AddDbContext<AgencySettlementDbContext>(options =>
+        {
             options.UseSqlServer(
-                configuration.GetConnectionString("AgencySettlementDb")));
+                configuration.GetConnectionString("AgencySettlementDb"));
+        });
+
+        services.AddHttpContextAccessor();
+
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+
+        services.AddScoped<IUserRepository, UserRepository>();
 
         services.AddScoped<ImportExamRecordsCommandValidator>();
 
@@ -33,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<
             IPercentRuleRepository,
             PercentRuleRepository>();
+
         services.AddScoped<IAgencyRepository, AgencyRepository>();
 
         services.AddScoped<
@@ -44,8 +60,8 @@ public static class DependencyInjection
             SettlementHistoryRepository>();
 
         services.AddScoped<
-    ISettlementDebtRepository,
-    SettlementDebtRepository>();
+            ISettlementDebtRepository,
+            SettlementDebtRepository>();
 
         services.AddScoped<
             ISettlementPaymentRepository,
@@ -54,23 +70,31 @@ public static class DependencyInjection
         services.AddScoped<
             ISettlementReportRepository,
             SettlementReportRepository>();
+
         services.AddScoped<
-    ISettlementLookupRepository,
-    SettlementLookupRepository>();
+            ISettlementLookupRepository,
+            SettlementLookupRepository>();
+
+        services.AddScoped<
+    IExternalSettlementStatusRepository,
+    ExternalSettlementStatusRepository>();
 
         services.Configure<ExternalExamApiOptions>(
             configuration.GetSection("ExternalExamApi"));
 
-        services.AddHttpClient<IExternalExamApi, ExternalExamApi>((sp, client) =>
-        {
-            var options =
-                sp.GetRequiredService<IOptions<ExternalExamApiOptions>>().Value;
+        services.AddHttpClient<IExternalExamApi, ExternalExamApi>(
+            (serviceProvider, client) =>
+            {
+                var options =
+                    serviceProvider
+                        .GetRequiredService<IOptions<ExternalExamApiOptions>>()
+                        .Value;
 
-            client.BaseAddress = new Uri(options.BaseUrl);
+                client.BaseAddress = new Uri(options.BaseUrl);
 
-            client.Timeout = TimeSpan.FromSeconds(
-                Math.Max(1, options.TimeoutSeconds));
-        });
+                client.Timeout = TimeSpan.FromSeconds(
+                    Math.Max(1, options.TimeoutSeconds));
+            });
 
         return services;
     }

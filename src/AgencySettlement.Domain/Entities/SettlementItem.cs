@@ -11,6 +11,7 @@ namespace AgencySettlement.Domain.Entities
         public long Id { get; set; }
 
         public long SettlementId { get; set; }
+        public int AgencyId { get; set; }
 
         public int PackageId { get; set; }
 

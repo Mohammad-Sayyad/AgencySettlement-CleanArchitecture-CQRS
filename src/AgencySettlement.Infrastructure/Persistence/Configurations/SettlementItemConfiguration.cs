@@ -45,8 +45,8 @@ namespace AgencySettlement.Infrastructure.Persistence.Configurations
                 .HasPrecision(19, 4);
 
             builder.Property(x => x.PersianExecutionDate)
-    .HasMaxLength(20)
-    .IsRequired();
+                .HasMaxLength(20)
+                .IsRequired();
 
             builder.Property(x => x.FreeCandidateCount)
                 .IsRequired();
@@ -57,6 +57,7 @@ namespace AgencySettlement.Infrastructure.Persistence.Configurations
             builder.HasIndex(x => new
             {
                 x.SettlementId,
+                x.AgencyId,
                 x.RegistrationPlanId,
                 x.StudyFieldId
             })
