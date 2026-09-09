@@ -1,5 +1,7 @@
-﻿using AgencySettlement.Application.Settlements.Queries.ReportQuery;
+﻿using AgencySettlement.Application.Features.Queries.GetSettlementDetailsQuery;
+using AgencySettlement.Application.Settlements.Queries.ReportQuery;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AgencySettlement.API.Controllers
@@ -14,7 +16,7 @@ namespace AgencySettlement.API.Controllers
         {
             _mediator = mediator;
         }
-
+        [Authorize]
         [HttpGet("settlement")]
         public async Task<IActionResult> GetSettlementReport(
             [FromQuery] int? agencyId,
@@ -31,6 +33,23 @@ namespace AgencySettlement.API.Controllers
                     persianExecutionDate,
                     pageNumber,
                     pageSize),
+                cancellationToken);
+
+            return Ok(result);
+        }
+
+        [HttpGet("settlement/details")]
+        public async Task<IActionResult> GetSettlementDetails(
+     [FromQuery] int agencyId,
+     [FromQuery] int yearId,
+     [FromQuery] string persianExecutionDate,
+     CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(
+                new GetSettlementDetailsQuery(
+                    agencyId,
+                    yearId,
+                    persianExecutionDate),
                 cancellationToken);
 
             return Ok(result);

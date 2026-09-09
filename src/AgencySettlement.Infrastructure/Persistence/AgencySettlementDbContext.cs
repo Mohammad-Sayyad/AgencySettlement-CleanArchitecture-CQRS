@@ -25,7 +25,18 @@ public sealed class AgencySettlementDbContext(DbContextOptions<AgencySettlementD
     public DbSet<ExamBooklet> ExamBooklets { get; set; }
     public DbSet<Payment> Payments { get; set; }
     public DbSet<ExamDate> ExamDates { get; set; }
+    public DbSet<User> Users { get; set; }
+    public DbSet<SettlementItem> SettlementItems { get; set; }
+    public DbSet<SettlementPaymentPeriod> SettlementPaymentPeriods { get; set; }
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder) =>
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(AgencySettlementDbContext).Assembly);
+    //protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+    //    modelBuilder.ApplyConfigurationsFromAssembly(typeof(AgencySettlementDbContext).Assembly);
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.ApplyConfigurationsFromAssembly(
+            typeof(AgencySettlementDbContext).Assembly);
+    }
 }

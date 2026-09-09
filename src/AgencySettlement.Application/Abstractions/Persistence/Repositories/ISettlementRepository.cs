@@ -15,5 +15,9 @@ namespace AgencySettlement.Application.Abstractions.Persistence.Repositories
 
         Task SaveChangesAsync(
             CancellationToken cancellationToken);
+
+        Task<List<SettlementItem>> GetSettlementItemsAsync(
+        long settlementId,
+        CancellationToken cancellationToken);
     }
 }

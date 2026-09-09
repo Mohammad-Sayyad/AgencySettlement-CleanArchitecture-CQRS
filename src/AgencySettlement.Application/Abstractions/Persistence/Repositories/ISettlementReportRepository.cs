@@ -17,5 +17,11 @@ namespace AgencySettlement.Application.Abstractions.Persistence.Repositories
      int pageNumber,
      int pageSize,
      CancellationToken cancellationToken);
+
+        Task<List<SettlementDetailItemDto>> GetSettlementDetailsAsync(
+    int agencyId,
+    int yearId,
+    string persianExecutionDate,
+    CancellationToken cancellationToken);
     }
 }

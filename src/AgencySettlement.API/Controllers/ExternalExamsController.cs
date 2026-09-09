@@ -2,6 +2,7 @@
 using AgencySettlement.Application.DTOs;
 using AgencySettlement.Application.ExternalExams.Commands;
 using AgencySettlement.Application.ExternalExams.Commands.ImportExternalExams;
+using AgencySettlement.Application.ExternalExamsFeatures.Queris.GetExternalSettlementStatusQuery;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -37,6 +38,23 @@ public sealed class ExternalExamsController : ControllerBase
             newRecords = result.NewRecords,
             duplicateRecords = result.DuplicateRecords
         });
+    }
+
+    [HttpGet("settlement-status")]
+    public async Task<IActionResult> GetSettlementStatus(
+      [FromQuery] int agencyId,
+      [FromQuery] int yearId,
+      [FromQuery] string persianExecutionDate,
+      CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(
+            new GetExternalSettlementStatusQuery(
+                agencyId,
+                yearId,
+                persianExecutionDate),
+            cancellationToken);
+
+        return Ok(result);
     }
 }
 

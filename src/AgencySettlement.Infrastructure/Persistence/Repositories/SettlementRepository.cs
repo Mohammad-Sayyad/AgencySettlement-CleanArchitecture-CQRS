@@ -1,5 +1,6 @@
 ﻿using AgencySettlement.Application.Abstractions.Persistence.Repositories;
 using AgencySettlement.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -33,6 +34,18 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
         {
             await _db.SaveChangesAsync(
                 cancellationToken);
+        }
+
+        public async Task<List<SettlementItem>> GetSettlementItemsAsync(
+       long settlementId,
+       CancellationToken cancellationToken)
+        {
+            return await _db.SettlementItems
+                .AsNoTracking()
+                .Where(x => x.SettlementId == settlementId)
+                .OrderBy(x => x.EducationalLevelId)
+                .ThenBy(x => x.StudyFieldId)
+                .ToListAsync(cancellationToken);
         }
     }
 }
