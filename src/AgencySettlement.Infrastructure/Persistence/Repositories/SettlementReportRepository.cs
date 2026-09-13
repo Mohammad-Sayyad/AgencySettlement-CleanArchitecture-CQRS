@@ -695,7 +695,7 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
     .Where(x => x.RegistrationPlanId == 2 && x.ExamModeId == 0)
     .Sum(x => x.CandidateCount),
 
-                // سایت حضوری
+                // سایت حضوری // // 
 
                 TotalInPersonSiteAgencyCredit = inPersonItems
                     .Where(x => x.RegistrationPlanId == 8 && x.ExamModeId == 0)
