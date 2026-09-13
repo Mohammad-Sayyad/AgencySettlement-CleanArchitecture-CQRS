@@ -258,14 +258,14 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                 throw new ArgumentException(
                     "تاریخ پایان وارد نشده است.");
 
-            if (string.Compare(
-                    fromDate,
-                    toDate,
-                    StringComparison.Ordinal) > 0)
-            {
-                throw new ArgumentException(
-                    "تاریخ شروع نمی‌تواند بعد از تاریخ پایان باشد.");
-            }
+            //if (string.Compare(
+            //        fromDate,
+            //        toDate,
+            //        StringComparison.Ordinal) > 0)
+            //{
+            //    throw new ArgumentException(
+            //        "تاریخ شروع نمی‌تواند بعد از تاریخ پایان باشد.");
+            //}
 
             var settlementsQuery = _context.Settlements
                 .AsNoTracking()
