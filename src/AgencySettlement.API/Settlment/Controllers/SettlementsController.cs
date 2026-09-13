@@ -3,7 +3,7 @@ using AgencySettlement.Application.Settlements.Commands;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AgencySettlement.API.Controllers;
+namespace AgencySettlement.API.Settlment.Controllers;
 
 
     [ApiController]

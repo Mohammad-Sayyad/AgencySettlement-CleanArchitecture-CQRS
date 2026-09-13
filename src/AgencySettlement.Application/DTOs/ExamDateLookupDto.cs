@@ -11,4 +11,9 @@ namespace AgencySettlement.Application.DTOs
         public int Id { get; set; }
         public string PersianDate { get; set; } = string.Empty;
     }
+    public sealed class SecondExamDateLookupDto
+    {
+        public int Id { get; set; }
+        public string SecondPersianDate { get; set; } = string.Empty;
+    }
 }

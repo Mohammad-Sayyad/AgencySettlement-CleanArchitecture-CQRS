@@ -64,5 +64,37 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                 })
                 .ToListAsync(cancellationToken);
         }
+        public async Task<IReadOnlyList<SecondExamDateLookupDto>> GetSecondExamDatesAsync(
+            CancellationToken cancellationToken)
+        {
+            return await _context.ExamDates
+                .AsNoTracking()
+                .OrderByDescending(x => x.Id)
+                .Select(x => new SecondExamDateLookupDto
+                {
+                    Id = x.Id,
+                    SecondPersianDate = x.PersianDate
+                })
+                .ToListAsync(cancellationToken);
+        }
+
+
+        //    public async Task<IReadOnlyList<ExamDateLookupDto>> GetExamDatesAsync(
+        //string fromDate,
+        //string toDate,
+        //CancellationToken cancellationToken)
+        //    {
+        //        return await _context.ExamDates
+        //            .AsNoTracking()
+        //            .Where(x => string.Compare(x.PersianDate, fromDate) >= 0 &&
+        //                        string.Compare(x.PersianDate, toDate) <= 0)
+        //            .OrderBy(x => x.Id)
+        //            .Select(x => new ExamDateLookupDto
+        //            {
+        //                Id = x.Id,
+        //                PersianDate = x.PersianDate
+        //            })
+        //            .ToListAsync(cancellationToken);
+        //    }
     }
 }

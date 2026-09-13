@@ -2,7 +2,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AgencySettlement.API.Controllers
+namespace AgencySettlement.API.ExteralWebService.Controller
 {
     [ApiController]
     [Route("api/external/payment")]

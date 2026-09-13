@@ -85,7 +85,8 @@ public sealed class CalculateSettlementCommandHandler
                 x.RegistrationPlanId,
                 x.StudyFieldId,
                 x.YearId,
-                x.AgencyId
+                x.AgencyId,
+                x.PersianExecutionDate
             })
             .OrderBy(x => GetQuotaPriority(x.Key.RegistrationPlanId));
 
@@ -233,7 +234,7 @@ public sealed class CalculateSettlementCommandHandler
                     RegistrationPlanId = group.Key.RegistrationPlanId,
                     YearId = group.Key.YearId,
                     StudyFieldId = group.Key.StudyFieldId,
-                    PersianExecutionDate = price.PersianExecutionDate,
+                    PersianExecutionDate = group.Key.PersianExecutionDate,
                     AgencyId = group.Key.AgencyId,
                     CandidateCount = candidateCount,
                     FreeCandidateCount = freeQuotaCount,

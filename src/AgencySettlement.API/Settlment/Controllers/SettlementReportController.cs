@@ -4,7 +4,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AgencySettlement.API.Controllers
+namespace AgencySettlement.API.Settlment.Controllers
 {
     [ApiController]
     [Route("api/report")]
@@ -16,21 +16,44 @@ namespace AgencySettlement.API.Controllers
         {
             _mediator = mediator;
         }
-        [Authorize]
+        //  [Authorize]
+        //  [HttpGet("settlement")]
+        //  public async Task<IActionResult> GetSettlementReport(
+        //[FromQuery] int? agencyId,
+        //[FromQuery] int yearId,
+        //[FromQuery] string[] persianExecutionDate,
+        //[FromQuery] int pageNumber = 1,
+        //[FromQuery] int pageSize = 50,
+        //CancellationToken cancellationToken = default)
+        //  {
+        //      var result = await _mediator.Send(
+        //          new GetSettlementReportQuery(
+        //              agencyId,
+        //              yearId,
+        //              persianExecutionDate,
+        //              pageNumber,
+        //              pageSize),
+        //          cancellationToken);
+
+        //      return Ok(result);
+        //  }
+
         [HttpGet("settlement")]
         public async Task<IActionResult> GetSettlementReport(
-            [FromQuery] int? agencyId,
-            [FromQuery] int yearId,
-            [FromQuery] string persianExecutionDate,
-            [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 20,
-            CancellationToken cancellationToken = default)
+    [FromQuery] int? agencyId,
+    [FromQuery] int yearId,
+    [FromQuery] string fromDateId,
+    [FromQuery] string toDateId,
+    [FromQuery] int pageNumber = 1,
+    [FromQuery] int pageSize = 50,
+    CancellationToken cancellationToken = default)
         {
             var result = await _mediator.Send(
                 new GetSettlementReportQuery(
                     agencyId,
                     yearId,
-                    persianExecutionDate,
+                    fromDateId,
+                    toDateId,
                     pageNumber,
                     pageSize),
                 cancellationToken);

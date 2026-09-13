@@ -10,15 +10,30 @@ namespace AgencySettlement.Application.Abstractions.Persistence.Repositories
 {
     public interface ISettlementReportRepository
     {
-        Task<SettlementReportResponse> GetReportAsync(
-     int? agencyId,
-     int yearId,
-     string persianExecutionDate,
-     int pageNumber,
-     int pageSize,
-     CancellationToken cancellationToken);
+        //Task<SettlementReportResponse> GetReportAsync(
+        //   int? agencyId,
+        //   int yearId,
+        //   string[] persianExecutionDate,
+        //   int pageNumber,
+        //   int pageSize,
+        //   CancellationToken cancellationToken);
 
-        Task<List<SettlementDetailItemDto>> GetSettlementDetailsAsync(
+        Task<SettlementReportResponse> GetReportAsync(
+    int? agencyId,
+    int yearId,
+    string fromDateId,
+    string toDateId,
+    int pageNumber,
+    int pageSize,
+    CancellationToken cancellationToken);
+
+        //    Task<List<SettlementDetailItemDto>> GetSettlementDetailsAsync(
+        //int agencyId,
+        //int yearId,
+        //string persianExecutionDate,
+        //CancellationToken cancellationToken);
+
+        Task<SettlementDetailsDto> GetSettlementDetailsAsync(
     int agencyId,
     int yearId,
     string persianExecutionDate,

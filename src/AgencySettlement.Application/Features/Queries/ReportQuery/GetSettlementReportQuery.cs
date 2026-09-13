@@ -10,10 +10,11 @@ using System.Threading.Tasks;
 namespace AgencySettlement.Application.Settlements.Queries.ReportQuery
 {
     public sealed record GetSettlementReportQuery(
-    int? AgencyId,
-    int YearId,
-    string PersianExecutionDate,
-    int PageNumber = 1,
-    int PageSize = 20)
-    : IRequest<SettlementReportResponse>;
+     int? AgencyId,
+     int YearId,
+     string FromDateId,
+     string ToDateId,
+     int PageNumber,
+     int PageSize)
+     : IRequest<SettlementReportResponse>;
 }

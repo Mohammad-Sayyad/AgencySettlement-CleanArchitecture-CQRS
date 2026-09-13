@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using static AgencySettlement.Application.Settlements.Queries.GetSettlementFiltersLookupQuery.GetSettlementLookupDtoQuery;
 
-namespace AgencySettlement.API.Controllers
+namespace AgencySettlement.API.Settlment.Controllers
 {
     [ApiController]
     [Route("api/Combo")]
@@ -43,6 +43,16 @@ namespace AgencySettlement.API.Controllers
         {
             var result = await _mediator.Send(
                 new GetExamDatesQuery(),
+                cancellationToken);
+
+            return Ok(result);
+        }
+        [HttpGet("exam-dates2")]
+        public async Task<IActionResult> GetExamDates2(
+            CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(
+                new GetSecondExamDatesQuery(),
                 cancellationToken);
 
             return Ok(result);
