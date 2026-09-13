@@ -4,7 +4,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AgencySettlement.API.Controllers;
+namespace AgencySettlement.API.Auth.Controller;
 
 [ApiController]
 [Route("api/[controller]")]

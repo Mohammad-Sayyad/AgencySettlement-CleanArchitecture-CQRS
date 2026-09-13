@@ -1,22 +1,24 @@
-﻿
-using AgencySettlement.Application.DTOs;
+﻿using AgencySettlement.Application.DTOs;
 using AgencySettlement.Application.ExternalExams.Commands;
 using AgencySettlement.Application.ExternalExams.Commands.ImportExternalExams;
 using AgencySettlement.Application.ExternalExamsFeatures.Queris.GetExternalSettlementStatusQuery;
+using AgencySettlement.Application.Settlements.Queries.DebtQuery;
+using AgencySettlement.Application.Settlements.Queries.PaymentQuery;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AgencySettlement.API.Controllers;
+namespace AgencySettlement.API.ExteralWebService.Controller;
 
 [ApiController]
 [Route("api/external-exams")]
 public sealed class ExternalExamsController : ControllerBase
 {
     private readonly ISender _sender;
-
-    public ExternalExamsController(ISender sender)
+    private readonly IMediator _mediator;
+    public ExternalExamsController(ISender sender, IMediator mediator)
     {
         _sender = sender;
+        _mediator = mediator;
     }
 
     [HttpPost("import")]
@@ -53,6 +55,41 @@ public sealed class ExternalExamsController : ControllerBase
                 yearId,
                 persianExecutionDate),
             cancellationToken);
+
+        return Ok(result);
+    }
+
+    [HttpGet("send-debt")]
+    public async Task<IActionResult> SendDebt(
+           [FromQuery] int agencyId,
+           [FromQuery] int yearId,
+           [FromQuery] string persianExecutionDate,
+           CancellationToken cancellationToken)
+    {
+        var result =
+            await _mediator.Send(
+                new GetDebtQuery(
+                    agencyId,
+                    yearId,
+                    persianExecutionDate),
+                cancellationToken);
+
+        return Ok(result);
+    }
+    [HttpGet("get-payment")]
+    public async Task<IActionResult> GetPayment(
+           [FromQuery] int agencyId,
+           [FromQuery] int yearId,
+           [FromQuery] string persianExecutionDate,
+           CancellationToken cancellationToken)
+    {
+        var result =
+            await _mediator.Send(
+                new GetPaymentQuery(
+                    agencyId,
+                    yearId,
+                    persianExecutionDate),
+                cancellationToken);
 
         return Ok(result);
     }

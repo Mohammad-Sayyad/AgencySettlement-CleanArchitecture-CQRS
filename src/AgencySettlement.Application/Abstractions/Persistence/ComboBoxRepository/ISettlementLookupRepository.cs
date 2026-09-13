@@ -17,5 +17,12 @@ namespace AgencySettlement.Application.Abstractions.Persistence.ComboBoxReposito
 
         Task<IReadOnlyList<ExamDateLookupDto>> GetExamDatesAsync(
             CancellationToken cancellationToken);
+        Task<IReadOnlyList<SecondExamDateLookupDto>> GetSecondExamDatesAsync(
+            CancellationToken cancellationToken);
+
+   //     Task<IReadOnlyList<ExamDateLookupDto>> GetExamDatesAsync(
+   //string fromDate,
+   //string toDate,
+   //CancellationToken cancellationToken);
     }
 }

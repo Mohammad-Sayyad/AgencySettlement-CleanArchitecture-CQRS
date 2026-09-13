@@ -11,13 +11,14 @@ namespace AgencySettlement.Application.DTOs
         public long SettlementItemId { get; set; }
 
         public string Title { get; set; } = string.Empty;
-
+        public string YearName { get; set; } = string.Empty;
         public int PackageId { get; set; }
         public string PackageName { get; set; } = string.Empty;
-
+        public string AgencyName { get; set; } = string.Empty;
         public int ExamModeId { get; set; }
         public string ExamModeName { get; set; } = string.Empty;
-
+        public string RegistrationPlanName { get; set; } = string.Empty;
+        public int RegistrationPlanId { get; set; }
         public int StageTypeId { get; set; }
         public string StageTypeName { get; set; } = string.Empty;
 
@@ -27,6 +28,12 @@ namespace AgencySettlement.Application.DTOs
         public int StudyFieldId { get; set; }
         public string StudyFieldName { get; set; } = string.Empty;
 
+        public decimal StudentAmount { get; set; }
+
+        public decimal AgencyAmount { get; set; }
+
+        public decimal GajAmount { get; set; }
+        public decimal DebitAmount { get; set; }
         public int CandidateCount { get; set; }
         public int FreeCandidateCount { get; set; }
         public int PaidCandidateCount { get; set; }
@@ -36,16 +43,25 @@ namespace AgencySettlement.Application.DTOs
         public decimal DiscountAmount { get; set; }
         public decimal TotalAmount { get; set; }
 
-      
+       public int AgencyId { get; set; } 
 
         public decimal DiscountPercent { get; set; }
 
 
         public decimal AgencyPercent { get; set; }
-        public decimal AgencyAmount { get; set; }
 
         public decimal CreditAmount { get; set; }
 
-  
+        public decimal TotalBaseAmount { get; set; }
+
+        public decimal TotalStudentAmount { get; set; }
+
+        public decimal TotalAgencyAmount { get; set; }
+
+        public decimal TotalGajAmount { get; set; }
+
+        public decimal RemainingAmount { get; set; }
+
+
     }
 }

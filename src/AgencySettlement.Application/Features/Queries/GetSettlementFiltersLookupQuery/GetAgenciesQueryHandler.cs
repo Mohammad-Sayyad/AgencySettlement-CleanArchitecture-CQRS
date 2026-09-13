@@ -77,4 +77,25 @@ namespace AgencySettlement.Application.Settlements.Queries.GetSettlementFiltersL
                 cancellationToken);
         }
     }
+    public sealed class GetSecondExamDatesQueryHandler
+        : IRequestHandler<
+            GetSecondExamDatesQuery,
+            IReadOnlyList<SecondExamDateLookupDto>>
+    {
+        private readonly ISettlementLookupRepository _repository;
+
+        public GetSecondExamDatesQueryHandler(
+            ISettlementLookupRepository repository)
+        {
+            _repository = repository;
+        }
+
+        public async Task<IReadOnlyList<SecondExamDateLookupDto>> Handle(
+            GetSecondExamDatesQuery request,
+            CancellationToken cancellationToken)
+        {
+            return await _repository.GetSecondExamDatesAsync(
+                cancellationToken);
+        }
+    }
 }

@@ -18,5 +18,7 @@ namespace AgencySettlement.Application.Settlements.Queries.GetSettlementFiltersL
 
         public sealed record GetExamDatesQuery
             : IRequest<IReadOnlyList<ExamDateLookupDto>>;
+        public sealed record GetSecondExamDatesQuery
+            : IRequest<IReadOnlyList<SecondExamDateLookupDto>>;
     }
 }
