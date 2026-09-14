@@ -9,6 +9,8 @@ namespace AgencySettlement.Application.DTOs
 {
     public sealed class SettlementReportData
     {
+
+        public long SettlementId { get; init; }
         public int AgencyId { get; init; }
 
         public int DetailCode { get; init; }

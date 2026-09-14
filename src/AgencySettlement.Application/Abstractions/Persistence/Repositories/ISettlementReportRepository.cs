@@ -38,5 +38,11 @@ namespace AgencySettlement.Application.Abstractions.Persistence.Repositories
     int yearId,
     string persianExecutionDate,
     CancellationToken cancellationToken);
+
+
+        Task<SettlementSelectionDetailsDto> GetSettlementSelectionDetailsAsync(
+     int agencyId,
+     long[] settlementIds,
+     CancellationToken cancellationToken);
     }
 }

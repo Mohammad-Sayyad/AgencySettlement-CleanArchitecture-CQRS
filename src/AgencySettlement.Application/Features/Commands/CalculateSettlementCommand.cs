@@ -9,6 +9,6 @@ using System.Threading.Tasks;
 namespace AgencySettlement.Application.Settlements.Commands
 {
     public sealed record CalculateSettlementCommand(
-    CalculateSettlementRequest Request
-) : IRequest<SettlementResultDto>;
+    CalculateSettlementRequest Request)
+    : IRequest<SettlementResultDto>;
 }
