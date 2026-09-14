@@ -233,13 +233,13 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
 
 
         public async Task<SettlementReportResponse> GetReportAsync(
-      int? agencyId,
-      int yearId,
-      string fromDate,
-      string toDate,
-      int pageNumber,
-      int pageSize,
-      CancellationToken cancellationToken)
+    int? agencyId,
+    int yearId,
+    string fromDate,
+    string toDate,
+    int pageNumber,
+    int pageSize,
+    CancellationToken cancellationToken)
         {
             if (pageNumber < 1)
                 pageNumber = 1;
@@ -251,21 +251,10 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                 pageSize = 100;
 
             if (string.IsNullOrWhiteSpace(fromDate))
-                throw new ArgumentException(
-                    "تاریخ شروع وارد نشده است.");
+                throw new ArgumentException("تاریخ شروع وارد نشده است.");
 
             if (string.IsNullOrWhiteSpace(toDate))
-                throw new ArgumentException(
-                    "تاریخ پایان وارد نشده است.");
-
-            //if (string.Compare(
-            //        fromDate,
-            //        toDate,
-            //        StringComparison.Ordinal) > 0)
-            //{
-            //    throw new ArgumentException(
-            //        "تاریخ شروع نمی‌تواند بعد از تاریخ پایان باشد.");
-            //}
+                throw new ArgumentException("تاریخ پایان وارد نشده است.");
 
             var settlementsQuery = _context.Settlements
                 .AsNoTracking()
@@ -281,14 +270,13 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
             }
 
             var settlementData = await settlementsQuery
-                .GroupBy(x => x.AgencyId)
-                .Select(g => new
+                .Select(x => new
                 {
-                    AgencyId = g.Key,
-                    TotalDebit = g.Sum(x => x.TotalDebit),
-                    TotalCredit = g.Sum(x => x.TotalCredit),
-                    PersianExecutionDate =
-                        g.Max(x => x.PersianExecutionDate)
+                    SettlementId = x.Id,
+                    AgencyId = x.AgencyId,
+                    TotalDebit = x.TotalDebit,
+                    TotalCredit = x.TotalCredit,
+                    PersianExecutionDate = x.PersianExecutionDate
                 })
                 .ToListAsync(cancellationToken);
 
@@ -296,7 +284,7 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
             {
                 return new SettlementReportResponse
                 {
-                    Items = new List<SettlementReportData>(),
+                    Items = [],
                     TotalCount = 0,
                     PageNumber = pageNumber,
                     PageSize = pageSize,
@@ -406,6 +394,8 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
 
                     return new SettlementReportData
                     {
+                        SettlementId = settlement.SettlementId,
+
                         AgencyId = settlement.AgencyId,
 
                         DetailCode =
@@ -414,8 +404,7 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                         AgencyName =
                             agency?.Name ?? string.Empty,
 
-                        YearId =
-                            yearId,
+                        YearId = yearId,
 
                         PersianExecutionDate =
                             settlement.PersianExecutionDate,
@@ -437,7 +426,8 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                     };
                 })
                 .Where(x => x.Balance != 0)
-                .OrderBy(x => x.AgencyName)
+                .OrderByDescending(x => GetPersianDateSortValue(x.PersianExecutionDate))
+                .ThenBy(x => x.AgencyName)
                 .ToList();
 
             var totalCount =
@@ -471,6 +461,27 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                 TotalCreditAmount = totalCreditAmount,
                 TotalBalance = totalBalance
             };
+        }
+
+        private static long GetPersianDateSortValue(string date)
+        {
+            var parts = date
+                .Trim()
+                .Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length != 3)
+                return 0;
+
+            if (!int.TryParse(parts[0], out var year))
+                return 0;
+
+            if (!int.TryParse(parts[1], out var month))
+                return 0;
+
+            if (!int.TryParse(parts[2], out var day))
+                return 0;
+
+            return (long)year * 10000 + month * 100 + day;
         }
         //   public async Task<List<SettlementDetailItemDto>> GetSettlementDetailsAsync(
         //int agencyId,
@@ -795,6 +806,297 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                 _ => string.Empty
             };
 
-     
+
+
+        public async Task<SettlementSelectionDetailsDto> GetSettlementSelectionDetailsAsync(
+       int agencyId,
+       long[] settlementIds,
+       CancellationToken cancellationToken)
+        {
+            var items = await (
+                from item in _context.SettlementItems.AsNoTracking()
+
+                join package in _context.Packages.AsNoTracking()
+                    on item.PackageId equals package.Id
+
+                join educationalLevel in _context.EducationalLevels.AsNoTracking()
+                    on item.EducationalLevelId equals educationalLevel.Id
+
+                join studyField in _context.StudyFields.AsNoTracking()
+                    on item.StudyFieldId equals studyField.Id
+
+                join examMode in _context.ExamModes.AsNoTracking()
+                    on item.ExamModeId equals examMode.Id
+
+                join agency in _context.Agencies.AsNoTracking()
+                    on item.AgencyId equals agency.Id
+
+                join yearType in _context.YearTypes.AsNoTracking()
+                    on item.YearId equals yearType.Id
+
+                join registrationPlan in _context.RegistrationPlans.AsNoTracking()
+                    on item.RegistrationPlanId equals registrationPlan.Id
+
+                where item.AgencyId == agencyId
+                      && settlementIds.Contains(item.SettlementId)
+
+                select new SettlementSelectionDetailItemDto
+                {
+                    SettlementId = item.SettlementId,
+
+                    SettlementItemId = item.Id,
+
+                    PackageId = item.PackageId,
+                    PackageName = package.Name,
+
+                    ExamModeId = item.ExamModeId,
+                    ExamModeName = examMode.Name,
+
+                    AgencyName = agency.Name,
+
+                    YearId = item.YearId,
+                    YearName = yearType.Name,
+
+                    EducationalLevelId = item.EducationalLevelId,
+                    EducationalLevelName = educationalLevel.Name,
+
+                    RegistrationPlanId = item.RegistrationPlanId,
+                    RegistrationPlanName = registrationPlan.Name,
+
+                    StudyFieldId = item.StudyFieldId,
+                    StudyFieldName = studyField.Name,
+
+                    PersianExecutionDate = item.PersianExecutionDate,
+
+                    CandidateCount = item.CandidateCount,
+                    FreeCandidateCount = item.FreeCandidateCount,
+                    PaidCandidateCount = item.PaidCandidateCount,
+
+                    UnitPrice = item.UnitPrice,
+                    BaseAmount = item.BaseAmount,
+
+                    DiscountPercent = item.GajPercent,
+
+                    DiscountAmount =
+                        item.BaseAmount *
+                        item.GajPercent /
+                        100m,
+
+                    AgencyPercent = item.AgencyPercent,
+
+                    AgencyAmount = item.AgencyAmount,
+
+                    GajAmount = item.GajAmount,
+
+                    StudentAmount = item.StudentAmount,
+
+                    DebitAmount = item.DebitAmount,
+
+                    CreditAmount = item.CreditAmount,
+
+                    TotalAmount =
+                        item.BaseAmount -
+                        (
+                            item.BaseAmount *
+                            item.GajPercent /
+                            100m
+                        )
+                }
+            ).ToListAsync(cancellationToken);
+
+            foreach (var item in items)
+            {
+                item.StageTypeId =
+                    GetStageTypeId(item.EducationalLevelId);
+
+                item.StageTypeName =
+                    GetStageTypeName(item.EducationalLevelId);
+
+                item.Title =
+                    $"{item.ExamModeName} - " +
+                    $"{item.StageTypeName} - " +
+                    $"پایه {item.EducationalLevelName} - " +
+                    $"رشته {item.StudyFieldName}";
+            }
+
+            items = items
+                .OrderBy(x => GetPersianDateSortValue(
+                    x.PersianExecutionDate))
+                .ThenBy(x => x.ExamModeId)
+                .ThenBy(x => x.EducationalLevelId)
+                .ThenBy(x => x.StudyFieldId)
+                .ToList();
+
+            var inPersonItems = items
+                .Where(x => x.ExamModeId == 0)
+                .ToList();
+
+            var onlineItems = items
+                .Where(x => x.ExamModeId == 1)
+                .ToList();
+
+            return new SettlementSelectionDetailsDto
+            {
+                Items = items,
+
+                TotalBaseAmount =
+                    items.Sum(x => x.BaseAmount),
+
+                TotalStudentCountFree =
+                    items
+                        .Where(x =>
+                            x.RegistrationPlanId == 1 &&
+                            x.ExamModeId == 0)
+                        .Sum(x => x.CandidateCount),
+
+                TotalInPersonFreeAgencyDebit =
+                    inPersonItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 1)
+                        .Sum(x => x.DebitAmount),
+
+                TotalInPersonFreeGajCredit =
+                    inPersonItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 1)
+                        .Sum(x => x.AgencyAmount),
+
+                TotalOnlineStudentAmount =
+                    onlineItems.Sum(x => x.StudentAmount),
+
+                TotalInPersonHekmatAgencyCredit =
+                    inPersonItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 2)
+                        .Sum(x => x.CreditAmount),
+
+                TotalInPersonHekmatGajDebit =
+                    inPersonItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 2)
+                        .Sum(x => x.GajAmount),
+
+                TotalStudentPersonHekmat =
+                    inPersonItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 2)
+                        .Sum(x => x.CandidateCount),
+
+                TotalInPersonSiteAgencyCredit =
+                    inPersonItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 8)
+                        .Sum(x => x.AgencyAmount),
+
+                TotalInPersonSiteGajDebit =
+                    inPersonItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 8)
+                        .Sum(x => x.GajAmount),
+
+                TotalStudentPersonSite =
+                    inPersonItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 8)
+                        .Sum(x => x.CandidateCount),
+
+                TotalInPersonScholarshipAgencyDebit =
+                    inPersonItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 3 ||
+                            x.RegistrationPlanId == 5)
+                        .Sum(x => x.DebitAmount),
+
+                TotalInPersonScholarshipGajCredit =
+                    inPersonItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 3 ||
+                            x.RegistrationPlanId == 5)
+                        .Sum(x => x.CreditAmount),
+
+                TotalStudentPersonScholarship =
+                    inPersonItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 3 ||
+                            x.RegistrationPlanId == 5)
+                        .Sum(x => x.CandidateCount),
+
+                TotalOnlineFreeAgencyDebit =
+                    onlineItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 1)
+                        .Sum(x => x.DebitAmount),
+
+                TotalOnlineFreeGajCredit =
+                    onlineItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 1)
+                        .Sum(x => x.AgencyAmount),
+
+                TotalStudentOnlineFree =
+                    onlineItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 1)
+                        .Sum(x => x.CandidateCount),
+
+                TotalOnlineHekmatAgencyCredit =
+                    onlineItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 2)
+                        .Sum(x => x.CreditAmount),
+
+                TotalOnlineHekmatGajDebit =
+                    onlineItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 2)
+                        .Sum(x => x.GajAmount),
+
+                TotalStudentOnlineHekmat =
+                    onlineItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 2)
+                        .Sum(x => x.CandidateCount),
+
+                TotalOnlineSiteAgencyCredit =
+                    onlineItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 8)
+                        .Sum(x => x.AgencyAmount),
+
+                TotalOnlineSiteGajDebit =
+                    onlineItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 8)
+                        .Sum(x => x.GajAmount),
+
+                TotalStudentOnlineSite =
+                    onlineItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 8)
+                        .Sum(x => x.CandidateCount),
+
+                TotalOnlineScholarshipAgencyCredit =
+                    onlineItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 3 ||
+                            x.RegistrationPlanId == 5)
+                        .Sum(x => x.AgencyAmount),
+
+                TotalOnlineScholarshipGajCredit =
+                    onlineItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 3 ||
+                            x.RegistrationPlanId == 5)
+                        .Sum(x => x.GajAmount),
+
+                TotalStudentOnlineScholarship =
+                    onlineItems
+                        .Where(x =>
+                            x.RegistrationPlanId == 3 ||
+                            x.RegistrationPlanId == 5)
+                        .Sum(x => x.CandidateCount)
+            };
+        }
+
     }
 }

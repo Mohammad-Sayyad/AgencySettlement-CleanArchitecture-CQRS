@@ -41,16 +41,18 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
             await _db.SaveChangesAsync(cancellationToken);
         }
 
-        public async Task<List<ExternalExamRecord>>
-    GetByAgencyAndYearAsync(
-        int agencyId,
-        int yearId,
-        CancellationToken cancellationToken)
+        public async Task<List<ExternalExamRecord>> GetByAgencyAndYearAsync(
+         int agencyId,
+         int yearId,
+         string persianExecutionDate,
+         CancellationToken cancellationToken)
         {
             return await _db.ExternalExamRecords
+                .AsNoTracking()
                 .Where(x =>
                     x.AgencyId == agencyId &&
-                    x.YearId == yearId)
+                    x.YearId == yearId &&
+                    x.PersianExecutionDate == persianExecutionDate)
                 .ToListAsync(cancellationToken);
         }
     }

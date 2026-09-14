@@ -9,7 +9,10 @@ namespace AgencySettlement.Application.DTOs
     public sealed class SettlementDetailItemDto
     {
         public long SettlementItemId { get; set; }
+        public long SettlementId { get; set; }
+        public decimal AgencyPercent { get; init; }
 
+        public decimal GajPercent { get; init; }
         public string Title { get; set; } = string.Empty;
         public string YearName { get; set; } = string.Empty;
         public int PackageId { get; set; }
@@ -18,6 +21,7 @@ namespace AgencySettlement.Application.DTOs
         public int ExamModeId { get; set; }
         public string ExamModeName { get; set; } = string.Empty;
         public string RegistrationPlanName { get; set; } = string.Empty;
+        public string PersianExecutionDate { get; set; } = string.Empty;
         public int RegistrationPlanId { get; set; }
         public int StageTypeId { get; set; }
         public string StageTypeName { get; set; } = string.Empty;
@@ -29,11 +33,13 @@ namespace AgencySettlement.Application.DTOs
         public string StudyFieldName { get; set; } = string.Empty;
 
         public decimal StudentAmount { get; set; }
+        public decimal StudentPercent { get; set; }
 
         public decimal AgencyAmount { get; set; }
 
         public decimal GajAmount { get; set; }
         public decimal DebitAmount { get; set; }
+        public int YearId { get; set; }
         public int CandidateCount { get; set; }
         public int FreeCandidateCount { get; set; }
         public int PaidCandidateCount { get; set; }
@@ -48,7 +54,7 @@ namespace AgencySettlement.Application.DTOs
         public decimal DiscountPercent { get; set; }
 
 
-        public decimal AgencyPercent { get; set; }
+    
 
         public decimal CreditAmount { get; set; }
 

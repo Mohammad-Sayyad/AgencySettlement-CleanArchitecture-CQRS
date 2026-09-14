@@ -21,9 +21,10 @@ namespace AgencySettlement.Application.Abstractions.External
             CancellationToken cancellationToken);
 
         Task<List<ExternalExamRecord>> GetByAgencyAndYearAsync(
-           int agencyId,
-           int yearId,
-           CancellationToken cancellationToken);
+    int agencyId,
+    int yearId,
+    string persianExecutionDate,
+    CancellationToken cancellationToken);
     }
 }
 

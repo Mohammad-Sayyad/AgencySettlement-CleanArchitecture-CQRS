@@ -1,4 +1,5 @@
 ﻿using AgencySettlement.Application.Features.Queries.GetSettlementDetailsQuery;
+using AgencySettlement.Application.Features.Queries.GetSettlementSelectionDetailsQuery;
 using AgencySettlement.Application.Settlements.Queries.ReportQuery;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -73,6 +74,21 @@ namespace AgencySettlement.API.Settlment.Controllers
                     agencyId,
                     yearId,
                     persianExecutionDate),
+                cancellationToken);
+
+            return Ok(result);
+        }
+
+        [HttpGet("settlement/selection-details")]
+        public async Task<IActionResult> GetSettlementSelectionDetails(
+    [FromQuery] int agencyId,
+    [FromQuery] long[] settlementIds,
+    CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(
+                new GetSettlementSelectionDetailsQuery(
+                    agencyId,
+                    settlementIds),
                 cancellationToken);
 
             return Ok(result);
