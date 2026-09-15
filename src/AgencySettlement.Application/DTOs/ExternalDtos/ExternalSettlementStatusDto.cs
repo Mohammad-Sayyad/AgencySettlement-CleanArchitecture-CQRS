@@ -13,6 +13,8 @@ namespace AgencySettlement.Application.DTOs.ExternalDtos
 
         public int YearId { get; set; }
 
+        public long SettlmentId { get; set; }
+
         public string PersianExecutionDate { get; set; } = string.Empty;
 
         public string PaymentDeadline { get; set; } = string.Empty;

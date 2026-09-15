@@ -14,6 +14,12 @@ public sealed class SettlementResultDto
 
     public List<SettlementItemResultDto> Items { get; set; } = [];
 
+    public int FreeQuotaCount { get; set; }
+
+    public int OneHundredThousandQuotaCount { get; set; }
+
+    public decimal ContractFloorAmount { get; set; }
+
     public decimal TotalDebitGaj { get; set; }
 
     public decimal TotalCreditGaj { get; set; }

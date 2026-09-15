@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AgencySettlement.Domain.Entities
 {
@@ -11,6 +7,7 @@ namespace AgencySettlement.Domain.Entities
         public long Id { get; set; }
 
         public long SettlementId { get; set; }
+
         public int AgencyId { get; set; }
 
         public int PackageId { get; set; }
@@ -18,6 +15,12 @@ namespace AgencySettlement.Domain.Entities
         public int EducationalLevelId { get; set; }
 
         public int StudyFieldId { get; set; }
+
+        public decimal ContractFloorAmount { get; set; }
+
+        public int FreeCandidateCount { get; set; }
+
+        public int PaidCandidateCount { get; set; }
 
         public int ExamModeId { get; set; }
 
@@ -47,10 +50,12 @@ namespace AgencySettlement.Domain.Entities
 
         public decimal CreditAmount { get; set; }
 
+        public int FreeQuotaCount { get; set; }
+
+        public int OneHundredThousandQuotaCount { get; set; }
+
         public DateTime CreatedAt { get; set; }
 
-        public int FreeCandidateCount { get; set; }
-        public int PaidCandidateCount { get; set; }
         public string PersianExecutionDate { get; set; } = string.Empty;
     }
 }

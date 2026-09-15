@@ -12,7 +12,7 @@ namespace AgencySettlement.Application.DTOs
         public List<SettlementDetailItemDto> Items { get; set; } = [];
         public decimal TotalBaseAmount { get; set; }
         //
-        public int TotalStudentCountFree { get; set; }
+        public int TotalPersonStudentCountFree { get; set; }
         public decimal TotalInPersonFreeAgencyDebit { get; set; }
         public decimal TotalInPersonFreeGajCredit { get; set; }
         public decimal TotalOnlineStudentAmount { get; set; }
@@ -32,6 +32,12 @@ namespace AgencySettlement.Application.DTOs
         public decimal TotalInPersonScholarshipGajCredit { get; set; }
 
         public int TotalStudentPersonScholarship { get; set; }
+
+        public int TotalInPersonFreeQuota { get; set; }
+        public int TotalInPersonOneHundredThousandQuota { get; set; }
+
+        public int TotalInPersonFreeQuotaUsed { get; set; }
+        public int TotalInPersonOneHundredThousandQuotaUsed { get; set; }
 
         //
         public decimal TotalOnlineFreeAgencyDebit { get; set; }
@@ -54,7 +60,9 @@ namespace AgencySettlement.Application.DTOs
         public int TotalStudentOnlineScholarship { get; set; }
 
 
-       
+        //
+        public decimal ContractFloorAmount { get; set; }
+        public decimal TotalDebit { get; set; }
     }
   
 }

@@ -17,6 +17,10 @@ namespace AgencySettlement.Domain.Entities
 
         public int RegionId { get; set; }
         public int FreeQuotaCount { get; set; }
+
+        public int OneHundredThousandQuotaCount { get; set; }
+
+        public decimal ContractFloorAmount { get; set; }
         public State State { get; set; } = null!;
 
         public Region Region { get; set; } = null!;

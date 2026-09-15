@@ -583,10 +583,10 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
 
 
         public async Task<SettlementDetailsDto> GetSettlementDetailsAsync(
-       int agencyId,
-       int yearId,
-       string persianExecutionDate,
-       CancellationToken cancellationToken)
+        int agencyId,
+        int yearId,
+        string persianExecutionDate,
+        CancellationToken cancellationToken)
         {
             var items = await (
                 from item in _context.SettlementItems.AsNoTracking()
@@ -611,6 +611,8 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                 select new SettlementDetailItemDto
                 {
                     SettlementItemId = item.Id,
+                    SettlementId = item.SettlementId,
+
                     PackageId = item.PackageId,
                     PackageName = package.Name,
 
@@ -666,16 +668,103 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
 
             var inPersonItems = items;
 
-            var onlineItems = items
-                ;
+            var onlineItems = items;
 
             var totalStudentFree = items;
+
+            var plan5InPersonItems = items
+                .Where(x =>
+                    x.ExamModeId == 0 &&
+                    x.RegistrationPlanId == 5)
+                .ToList();
+
+            var totalPlan5InPersonCandidates = plan5InPersonItems
+                .Sum(x => x.CandidateCount);
+
+            var plan5Quota = await _context.SettlementItems
+                .AsNoTracking()
+                .Where(x =>
+                    x.AgencyId == agencyId &&
+                    x.YearId == yearId &&
+                    x.PersianExecutionDate == persianExecutionDate &&
+                    x.ExamModeId == 0 &&
+                    x.RegistrationPlanId == 5)
+                .Select(x => new
+                {
+                    x.FreeQuotaCount,
+                    x.OneHundredThousandQuotaCount
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            var totalInPersonFreeQuota =
+                plan5Quota?.FreeQuotaCount ?? 0;
+
+            var totalInPersonOneHundredThousandQuota =
+                plan5Quota?.OneHundredThousandQuotaCount ?? 0;
+
+            var totalInPersonFreeQuotaUsed =
+                Math.Min(
+                    totalInPersonFreeQuota,
+                    totalPlan5InPersonCandidates);
+
+            var remainingAfterFreeQuota =
+                totalPlan5InPersonCandidates -
+                totalInPersonFreeQuotaUsed;
+
+            var totalInPersonOneHundredThousandQuotaUsed =
+                Math.Min(
+                    totalInPersonOneHundredThousandQuota,
+                    remainingAfterFreeQuota);
+
+            var settlementIds = items
+                .Select(x => x.SettlementId)
+                .Distinct()
+                .ToList();
+
+            var settlementInfo = await _context.Settlements
+                .AsNoTracking()
+                .Where(x =>
+                    settlementIds.Contains(x.Id) &&
+                    x.AgencyId == agencyId &&
+                    x.YearId == yearId)
+                .Select(x => new
+                {
+                    x.Id,
+                    x.TotalDebit
+                })
+                .ToListAsync(cancellationToken);
+
+            var totalDebit = settlementInfo
+                .Select(x => x.TotalDebit)
+                .FirstOrDefault();
+
+            var contractFloorAmount = await _context.SettlementItems
+                .AsNoTracking()
+                .Where(x =>
+                    x.AgencyId == agencyId &&
+                    x.YearId == yearId &&
+                    x.PersianExecutionDate == persianExecutionDate)
+                .Select(x => x.ContractFloorAmount)
+                .FirstOrDefaultAsync(cancellationToken);
 
             return new SettlementDetailsDto
             {
                 Items = items,
 
                 TotalBaseAmount = items.Sum(x => x.BaseAmount),
+
+                ContractFloorAmount = contractFloorAmount,
+                TotalDebit = totalDebit,
+
+                // سهمیه حضوری فقط پلن 5
+                TotalInPersonFreeQuota = totalInPersonFreeQuota,
+                TotalInPersonFreeQuotaUsed = totalInPersonFreeQuotaUsed,
+
+                TotalInPersonOneHundredThousandQuota =
+                    totalInPersonOneHundredThousandQuota,
+
+                TotalInPersonOneHundredThousandQuotaUsed =
+                    totalInPersonOneHundredThousandQuotaUsed,
 
                 //حضوری و آزاد
 
@@ -687,10 +776,9 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                     .Where(x => x.RegistrationPlanId == 1 && x.ExamModeId == 0)
                     .Sum(x => x.AgencyAmount),
 
-                TotalStudentCountFree = items
-    .Where(x => x.RegistrationPlanId == 1 && x.ExamModeId == 0)
-    .Sum(x => x.CandidateCount),
-
+                TotalPersonStudentCountFree = items
+                    .Where(x => x.RegistrationPlanId == 1 && x.ExamModeId == 0)
+                    .Sum(x => x.CandidateCount),
 
                 //حکمت حضوری
 
@@ -703,10 +791,10 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                     .Sum(x => x.GajAmount),
 
                 TotalStudentPersonHekmat = items
-    .Where(x => x.RegistrationPlanId == 2 && x.ExamModeId == 0)
-    .Sum(x => x.CandidateCount),
+                    .Where(x => x.RegistrationPlanId == 2 && x.ExamModeId == 0)
+                    .Sum(x => x.CandidateCount),
 
-                // سایت حضوری // // //
+                // سایت حضوری
 
                 TotalInPersonSiteAgencyCredit = inPersonItems
                     .Where(x => x.RegistrationPlanId == 8 && x.ExamModeId == 0)
@@ -715,26 +803,33 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                 TotalInPersonSiteGajDebit = inPersonItems
                     .Where(x => x.RegistrationPlanId == 8 && x.ExamModeId == 0)
                     .Sum(x => x.GajAmount),
-                TotalStudentPersonSite = items.Where(x => x.RegistrationPlanId == 8 && x.ExamModeId == 0)
+
+                TotalStudentPersonSite = items
+                    .Where(x => x.RegistrationPlanId == 8 && x.ExamModeId == 0)
                     .Sum(x => x.CandidateCount),
-
-
 
                 // سهمیه ای حضوری
+
                 TotalInPersonScholarshipAgencyDebit = inPersonItems
-    .Where(x => (x.RegistrationPlanId == 3 || x.RegistrationPlanId == 5)
-             && x.ExamModeId == 0)
-    .Sum(x => x.DebitAmount),
+                    .Where(x =>
+                        (x.RegistrationPlanId == 3 || x.RegistrationPlanId == 5) &&
+                        x.ExamModeId == 0)
+                    .Sum(x => x.DebitAmount),
 
                 TotalInPersonScholarshipGajCredit = inPersonItems
-                    .Where(x => (x.RegistrationPlanId == 3 || x.RegistrationPlanId == 5) && x.ExamModeId == 0)
+                    .Where(x =>
+                        (x.RegistrationPlanId == 3 || x.RegistrationPlanId == 5) &&
+                        x.ExamModeId == 0)
                     .Sum(x => x.CreditAmount),
-                TotalStudentPersonScholarship = items.Where(x => (x.RegistrationPlanId == 3 || x.RegistrationPlanId == 5) && x.ExamModeId == 0)
+
+                TotalStudentPersonScholarship = items
+                    .Where(x =>
+                        (x.RegistrationPlanId == 3 || x.RegistrationPlanId == 5) &&
+                        x.ExamModeId == 0)
                     .Sum(x => x.CandidateCount),
 
+                // آزاد آنلاین
 
-
-                // آزاد حضوری
                 TotalOnlineFreeAgencyDebit = onlineItems
                     .Where(x => x.RegistrationPlanId == 1 && x.ExamModeId == 1)
                     .Sum(x => x.DebitAmount),
@@ -742,12 +837,13 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                 TotalOnlineFreeGajCredit = onlineItems
                     .Where(x => x.RegistrationPlanId == 1 && x.ExamModeId == 1)
                     .Sum(x => x.AgencyAmount),
-                TotalStudentOnlineFree = items.Where(x=> x.RegistrationPlanId == 1 && x.ExamModeId == 1)
-                .Sum(x=> x.CandidateCount),
 
+                TotalStudentOnlineFree = items
+                    .Where(x => x.RegistrationPlanId == 1 && x.ExamModeId == 1)
+                    .Sum(x => x.CandidateCount),
 
+                // حکمت آنلاین
 
-                // حکمت حضوری
                 TotalOnlineHekmatAgencyCredit = onlineItems
                     .Where(x => x.RegistrationPlanId == 2 && x.ExamModeId == 1)
                     .Sum(x => x.CreditAmount),
@@ -755,10 +851,13 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                 TotalOnlineHekmatGajDebit = onlineItems
                     .Where(x => x.RegistrationPlanId == 2 && x.ExamModeId == 1)
                     .Sum(x => x.GajAmount),
-                TotalStudentOnlineHekmat = items.Where(x=> x.RegistrationPlanId == 2 && x.ExamModeId == 1)
-                .Sum(x=> x.CandidateCount),
 
-                //ثبت نام از سایت
+                TotalStudentOnlineHekmat = items
+                    .Where(x => x.RegistrationPlanId == 2 && x.ExamModeId == 1)
+                    .Sum(x => x.CandidateCount),
+
+                // ثبت نام از سایت
+
                 TotalOnlineSiteAgencyCredit = onlineItems
                     .Where(x => x.RegistrationPlanId == 8 && x.ExamModeId == 1)
                     .Sum(x => x.AgencyAmount),
@@ -766,27 +865,35 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                 TotalOnlineSiteGajDebit = onlineItems
                     .Where(x => x.RegistrationPlanId == 8 && x.ExamModeId == 1)
                     .Sum(x => x.GajAmount),
-                TotalStudentOnlineSite = items.Where(x=> x.RegistrationPlanId == 8 && x.ExamModeId == 1)
-                .Sum(x=> x.CandidateCount),
 
+                TotalStudentOnlineSite = items
+                    .Where(x => x.RegistrationPlanId == 8 && x.ExamModeId == 1)
+                    .Sum(x => x.CandidateCount),
 
                 TotalOnlineScholarshipAgencyCredit = onlineItems
-                .Where(x=> (x.RegistrationPlanId == 3 || x.RegistrationPlanId == 5) && x.ExamModeId == 1)
-                .Sum(x=> x.AgencyAmount),
-                TotalOnlineScholarshipGajCredit = onlineItems.
-                Where(x=> (x.RegistrationPlanId == 3 || x.RegistrationPlanId == 5)
-                && x.ExamModeId == 1)
-                .Sum(x=> x.GajAmount),
-                TotalStudentOnlineScholarship = items.
-                Where(x=> (x.RegistrationPlanId == 3 || x.RegistrationPlanId == 5) && x.ExamModeId == 1)
-                .Sum(x=> x.CandidateCount),
+                    .Where(x =>
+                        (x.RegistrationPlanId == 3 || x.RegistrationPlanId == 5) &&
+                        x.ExamModeId == 1)
+                    .Sum(x => x.AgencyAmount),
+
+                TotalOnlineScholarshipGajCredit = onlineItems
+                    .Where(x =>
+                        (x.RegistrationPlanId == 3 || x.RegistrationPlanId == 5) &&
+                        x.ExamModeId == 1)
+                    .Sum(x => x.GajAmount),
+
+                TotalStudentOnlineScholarship = items
+                    .Where(x =>
+                        (x.RegistrationPlanId == 3 || x.RegistrationPlanId == 5) &&
+                        x.ExamModeId == 1)
+                    .Sum(x => x.CandidateCount),
 
                 // دانش آموز
+
                 TotalOnlineStudentAmount = onlineItems
                     .Sum(x => x.StudentAmount)
-            }; 
+            };
         }
-
 
         private static int GetStageTypeId(int educationalLevelId)
             => educationalLevelId switch

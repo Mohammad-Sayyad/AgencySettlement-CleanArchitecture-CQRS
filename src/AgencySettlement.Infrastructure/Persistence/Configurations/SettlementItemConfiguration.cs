@@ -44,14 +44,24 @@ namespace AgencySettlement.Infrastructure.Persistence.Configurations
             builder.Property(x => x.CreditAmount)
                 .HasPrecision(19, 4);
 
-            builder.Property(x => x.PersianExecutionDate)
-                .HasMaxLength(20)
+            builder.Property(x => x.FreeQuotaCount)
+                .IsRequired();
+
+            builder.Property(x => x.OneHundredThousandQuotaCount)
                 .IsRequired();
 
             builder.Property(x => x.FreeCandidateCount)
                 .IsRequired();
 
             builder.Property(x => x.PaidCandidateCount)
+                .IsRequired();
+
+            builder.Property(x => x.ContractFloorAmount)
+                .HasPrecision(18, 2)
+                .IsRequired();
+
+            builder.Property(x => x.PersianExecutionDate)
+                .HasMaxLength(20)
                 .IsRequired();
 
             builder.HasIndex(x => new
@@ -61,7 +71,8 @@ namespace AgencySettlement.Infrastructure.Persistence.Configurations
                 x.RegistrationPlanId,
                 x.StudyFieldId
             })
-            .HasDatabaseName("IX_SettlementItems_Settlement");
+            .HasDatabaseName(
+                "IX_SettlementItems_Settlement");
         }
     }
 }
