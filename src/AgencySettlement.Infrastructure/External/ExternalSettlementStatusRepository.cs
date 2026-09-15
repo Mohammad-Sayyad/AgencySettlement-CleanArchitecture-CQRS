@@ -66,7 +66,7 @@ public sealed class ExternalSettlementStatusRepository
             DebtAmount = settlement.TotalDebit
         };
     }
-
+    //
     private static SettlementPaymentStatus CalculateStatus(
         string paymentStartDate,
         string paymentDeadlineDate)
