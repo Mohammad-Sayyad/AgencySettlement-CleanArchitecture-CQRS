@@ -15,6 +15,13 @@
     public int CandidateCount { get; set; }
 
     public int FreeCandidateCount { get; set; }
+    public int OneHundredThousandCandidateCount { get; set; }
+
+    public int FreeQuotaCount { get; set; }
+
+    public int OneHundredThousandQuotaCount { get; set; }
+
+    public decimal ContractFloorAmount { get; set; }
 
     public int PaidCandidateCount { get; set; }
 

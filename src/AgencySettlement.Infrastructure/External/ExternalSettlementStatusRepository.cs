@@ -33,6 +33,7 @@ public sealed class ExternalSettlementStatusRepository
             .OrderByDescending(x => x.Id)
             .Select(x => new
             {
+
                 x.Id,
                 x.AgencyId,
                 x.YearId,
@@ -58,6 +59,7 @@ public sealed class ExternalSettlementStatusRepository
         {
             AgencyId = settlement.AgencyId,
             YearId = settlement.YearId,
+            SettlmentId = settlement.Id,
             PersianExecutionDate = paymentStartDate,
             PaymentDeadline = paymentDeadlineDate,
             PaymentStatus = paymentStatus,

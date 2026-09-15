@@ -1,15 +1,26 @@
-﻿
-using AgencySettlement.Application.Abstractions.External;
+﻿using AgencySettlement.Application.Abstractions.External;
 using AgencySettlement.Application.Abstractions.Persistence.Repositories;
 using AgencySettlement.Application.Settlements.Commands;
 using AgencySettlement.Domain.Entities;
 using MediatR;
+using System.Numerics;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace AgencySettlement.Application.Features.Settlements.Handlers;
 
 public sealed class CalculateSettlementCommandHandler
     : IRequestHandler<CalculateSettlementCommand, SettlementResultDto>
 {
+    private const int RegularPlanId = 1;
+    private const int HekmatPlanId = 2;
+    private const int SchoolScholarshipPlanId = 3;
+    private const int FreeVolunteerPlanId = 5;
+    private const int SiteRegistrationPlanId = 8;
+
+    private const int OnlineExamModeId = 1;
+
+    private const decimal OneHundredThousandTomanInRial = 1_000_000m;
+
     private readonly IExternalExamRecordRepository _externalRepository;
     private readonly IPriceRepository _priceRepository;
     private readonly IPercentRuleRepository _percentRepository;
@@ -41,12 +52,11 @@ public sealed class CalculateSettlementCommandHandler
 
         var request = command.Request;
 
-        var records = await _externalRepository
-            .GetByAgencyAndYearAsync(
-                request.AgencyId,
-                request.YearId,
-                request.PersianExecutionDate,
-                cancellationToken);
+        var records = await _externalRepository.GetByAgencyAndYearAsync(
+            request.AgencyId,
+            request.YearId,
+            request.PersianExecutionDate,
+            cancellationToken);
 
         if (records.Count == 0)
         {
@@ -69,6 +79,7 @@ public sealed class CalculateSettlementCommandHandler
             AgencyId = request.AgencyId,
             YearId = request.YearId,
             PersianExecutionDate = request.PersianExecutionDate,
+            ContractFloorAmount = agency.ContractFloorAmount,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -76,10 +87,8 @@ public sealed class CalculateSettlementCommandHandler
         decimal totalCredit = 0m;
         decimal totalCreditGaj = 0m;
 
-        // اولویت مصرف سهمیه: اول ۵ (داوطلب آزاد) بعد ۳ (مدارس)
         var groups = records
-            .GroupBy(x => new
-            {
+            .GroupBy(x => new SettlementGroupKey(
                 x.PackageId,
                 x.EducationalLevelId,
                 x.ExamModeId,
@@ -87,160 +96,78 @@ public sealed class CalculateSettlementCommandHandler
                 x.StudyFieldId,
                 x.YearId,
                 x.AgencyId,
-                x.PersianExecutionDate
-            })
-            .OrderBy(x => GetQuotaPriority(x.Key.RegistrationPlanId));
+                x.PersianExecutionDate))
+            .ToList();
+
+        var plan5QuotaState = new Plan5QuotaState(
+            agency.FreeQuotaCount,
+            agency.OneHundredThousandQuotaCount);
 
         foreach (var group in groups)
         {
-            var price = await _priceRepository.GetAsync(
+            var planId = group.Key.RegistrationPlanId;
+            var candidateCount = group.Count();
+
+            var unitPrice = await GetUnitPriceAsync(
                 group.Key.PackageId,
                 group.Key.EducationalLevelId,
                 group.Key.ExamModeId,
-                group.Key.RegistrationPlanId,
+                planId,
                 group.Key.YearId,
                 cancellationToken);
 
-            if (price is null)
+            if (unitPrice is null)
+            {
                 continue;
+            }
 
-            var candidateCount = group.Count();
-            var planId = group.Key.RegistrationPlanId;
-            var isQuotaPlan = IsFreeQuotaPlan(planId);
-
-            var isAlwaysFree =
-                isQuotaPlan &&
-                group.Key.ExamModeId == 1;
-
-            var freeQuotaCount = 0;
-
-            if (isQuotaPlan && !isAlwaysFree)
+            var calculation = planId switch
             {
-                freeQuotaCount =
-                    await _agencyRepository.ConsumeFreeQuotaAsync(
-                        request.AgencyId,
+                SchoolScholarshipPlanId =>
+                    CalculateSchoolScholarship(
+                        group.Key.ExamModeId,
                         candidateCount,
-                        cancellationToken);
-            }
-            else if (isAlwaysFree)
+                        unitPrice.Value),
+
+                FreeVolunteerPlanId =>
+                    CalculateFreeVolunteer(
+                        group.Key.ExamModeId,
+                        candidateCount,
+                        unitPrice.Value,
+                        plan5QuotaState),
+
+                HekmatPlanId =>
+                    CalculateHekmat(
+                        candidateCount,
+                        unitPrice.Value),
+
+                RegularPlanId or SiteRegistrationPlanId =>
+                    await CalculateRegularOrSiteAsync(
+                        planId,
+                        group.Key.ExamModeId,
+                        candidateCount,
+                        unitPrice.Value,
+                        request.AgencyId,
+                        cancellationToken),
+
+                _ => GroupCalculation.Invalid()
+            };
+
+            if (!calculation.IsValid)
             {
-                freeQuotaCount = candidateCount;
+                continue;
             }
 
-            var paidCandidateCount =
-                candidateCount - freeQuotaCount;
-
-            var unitPrice = price.Amount;
-            var baseAmount = candidateCount * unitPrice;
-            var paidBaseAmount =
-                paidCandidateCount * unitPrice;
-
-            decimal gajAmount = 0m;
-            decimal agencyAmount = 0m;
-            decimal studentAmount = 0m;
-            decimal debitAmount = 0m;
-            decimal creditAmount = 0m;
-            decimal agencyPercent = 0m;
-            decimal gajPercent = 0m;
-            decimal studentPercent = 0m;
-
-            if (isQuotaPlan)
-            {
-                gajAmount = paidBaseAmount;
-                agencyAmount = paidBaseAmount;
-                studentAmount = 0m;
-
-                debitAmount = paidBaseAmount;
-                creditAmount = 0m;
-
-                totalDebit += debitAmount;
-            }
-            else if (planId == 2)
-            {
-                gajAmount = baseAmount;
-                agencyAmount = baseAmount;
-                studentAmount = 0m;
-
-                debitAmount = 0m;
-                creditAmount = baseAmount;
-
-                totalCredit += creditAmount;
-            }
-            else
-            {
-                var percent = await _percentRepository.GetAsync(
-                    request.AgencyId,
-                    group.Key.ExamModeId,
-                    cancellationToken);
-
-                if (percent is null)
-                    continue;
-
-                agencyPercent = percent.AgencyPercent;
-                gajPercent = percent.GajPercent;
-                studentPercent = percent.StudentPercent;
-
-                gajAmount =
-                    CalculateShare(
-                        baseAmount,
-                        percent.AgencyPercent);
-
-                agencyAmount =
-                    CalculateShare(
-                        baseAmount,
-                        percent.GajPercent);
-
-                studentAmount =
-                    CalculateShare(
-                        baseAmount,
-                        percent.StudentPercent);
-
-                if (planId == 1)
-                {
-                    debitAmount = agencyAmount;
-                    creditAmount = 0m;
-
-                    totalDebit += debitAmount;
-                    totalCreditGaj += gajAmount;
-                }
-                else if (planId == 8)
-                {
-                    debitAmount = 0m;
-                    creditAmount = agencyAmount;
-
-                    totalCredit += creditAmount;
-                }
-            }
+            totalDebit += calculation.DebitAmount;
+            totalCredit += calculation.CreditAmount;
+            totalCreditGaj += calculation.TotalCreditGaj;
 
             settlement.Items.Add(
-                new SettlementItem
-                {
-                    PackageId = group.Key.PackageId,
-                    EducationalLevelId =
-                        group.Key.EducationalLevelId,
-                    ExamModeId = group.Key.ExamModeId,
-                    RegistrationPlanId =
-                        group.Key.RegistrationPlanId,
-                    YearId = group.Key.YearId,
-                    StudyFieldId = group.Key.StudyFieldId,
-                    PersianExecutionDate =
-                        group.Key.PersianExecutionDate,
-                    AgencyId = group.Key.AgencyId,
-                    CandidateCount = candidateCount,
-                    FreeCandidateCount = freeQuotaCount,
-                    PaidCandidateCount = paidCandidateCount,
-                    UnitPrice = unitPrice,
-                    BaseAmount = baseAmount,
-                    AgencyPercent = agencyPercent,
-                    GajPercent = gajPercent,
-                    StudentPercent = studentPercent,
-                    AgencyAmount = gajAmount,
-                    GajAmount = agencyAmount,
-                    StudentAmount = studentAmount,
-                    DebitAmount = debitAmount,
-                    CreditAmount = creditAmount,
-                    CreatedAt = DateTime.UtcNow
-                });
+                CreateSettlementItem(
+                    group.Key,
+                    candidateCount,
+                    calculation,
+                    agency));
         }
 
         if (settlement.Items.Count == 0)
@@ -283,8 +210,8 @@ public sealed class CalculateSettlementCommandHandler
             SettlementId = settlement.Id,
             AgencyId = settlement.AgencyId,
             YearId = settlement.YearId,
-            PersianExecutionDate =
-                settlement.PersianExecutionDate,
+            PersianExecutionDate = settlement.PersianExecutionDate,
+            ContractFloorAmount = settlement.ContractFloorAmount,
             TotalDebit = settlement.TotalDebit,
             TotalCredit = settlement.TotalCredit,
             Balance = settlement.Balance,
@@ -305,35 +232,301 @@ public sealed class CalculateSettlementCommandHandler
         return CreateResult(settlement);
     }
 
-    private static bool IsFreeQuotaPlan(
-        int registrationPlanId)
-        => registrationPlanId is 3 or 5;
-
-    private static int GetQuotaPriority(
-        int registrationPlanId)
-        => registrationPlanId switch
+    private static GroupCalculation CalculateSchoolScholarship(
+        int examModeId,
+        int candidateCount,
+        decimal unitPrice)
+    {
+        if (examModeId == OnlineExamModeId)
         {
-            5 => 1,
-            3 => 2,
-            _ => 4
+            return GroupCalculation.Free(
+                candidateCount,
+                unitPrice);
+        }
+
+        var baseAmount =
+            candidateCount *
+            OneHundredThousandTomanInRial;
+
+        return GroupCalculation.Debit(
+            candidateCount,
+            freeCandidateCount: 0,
+            paidCandidateCount: candidateCount,
+            unitPrice,
+            baseAmount);
+    }
+
+    private static GroupCalculation CalculateFreeVolunteer(
+        int examModeId,
+        int candidateCount,
+        decimal normalUnitPrice,
+        Plan5QuotaState quotaState)
+    {
+        if (examModeId == OnlineExamModeId)
+        {
+            return GroupCalculation.Free(
+                candidateCount,
+                normalUnitPrice);
+        }
+
+        var freeCandidateCount =
+            Math.Min(
+                quotaState.RemainingFreeQuota,
+                candidateCount);
+
+        quotaState.RemainingFreeQuota -=
+            freeCandidateCount;
+
+        var remainingCandidateCount =
+            candidateCount -
+            freeCandidateCount;
+
+        var oneHundredThousandCandidateCount =
+            Math.Min(
+                quotaState.RemainingOneHundredThousandQuota,
+                remainingCandidateCount);
+
+        quotaState.RemainingOneHundredThousandQuota -=
+            oneHundredThousandCandidateCount;
+
+        var normalCandidateCount =
+            remainingCandidateCount -
+            oneHundredThousandCandidateCount;
+
+        var baseAmount =
+            oneHundredThousandCandidateCount *
+            OneHundredThousandTomanInRial;
+
+        baseAmount +=
+            normalCandidateCount *
+            normalUnitPrice;
+
+        var paidCandidateCount =
+            candidateCount -
+            freeCandidateCount;
+
+        return GroupCalculation.Debit(
+            candidateCount,
+            freeCandidateCount,
+            paidCandidateCount,
+            normalUnitPrice,
+            baseAmount);
+    }
+
+    private static GroupCalculation CalculateHekmat(
+        int candidateCount,
+        decimal unitPrice)
+    {
+        var baseAmount =
+            candidateCount *
+            unitPrice;
+
+        return GroupCalculation.Credit(
+            candidateCount,
+            unitPrice,
+            baseAmount);
+    }
+
+    private async Task<GroupCalculation> CalculateRegularOrSiteAsync(
+        int registrationPlanId,
+        int examModeId,
+        int candidateCount,
+        decimal unitPrice,
+        int agencyId,
+        CancellationToken cancellationToken)
+    {
+        var percent =
+            await _percentRepository.GetAsync(
+                agencyId,
+                examModeId,
+                cancellationToken);
+
+        if (percent is null)
+        {
+            return GroupCalculation.Invalid();
+        }
+
+        var baseAmount =
+            candidateCount *
+            unitPrice;
+
+        var gajAmount =
+            CalculateShare(
+                baseAmount,
+                percent.AgencyPercent);
+
+        var agencyAmount =
+            CalculateShare(
+                baseAmount,
+                percent.GajPercent);
+
+        var studentAmount =
+            CalculateShare(
+                baseAmount,
+                percent.StudentPercent);
+
+        if (registrationPlanId == RegularPlanId)
+        {
+            return GroupCalculation.Regular(
+                candidateCount,
+                unitPrice,
+                baseAmount,
+                percent.AgencyPercent,
+                percent.GajPercent,
+                percent.StudentPercent,
+                agencyAmount,
+                gajAmount,
+                studentAmount);
+        }
+
+        if (registrationPlanId == SiteRegistrationPlanId)
+        {
+            return GroupCalculation.Site(
+                candidateCount,
+                unitPrice,
+                baseAmount,
+                percent.AgencyPercent,
+                percent.GajPercent,
+                percent.StudentPercent,
+                agencyAmount,
+                gajAmount,
+                studentAmount);
+        }
+
+        return GroupCalculation.Invalid();
+    }
+
+    private async Task<decimal?> GetUnitPriceAsync(
+        int packageId,
+        int educationalLevelId,
+        int examModeId,
+        int registrationPlanId,
+        int yearId,
+        CancellationToken cancellationToken)
+    {
+        var price = await _priceRepository.GetAsync(
+            packageId,
+            educationalLevelId,
+            examModeId,
+            registrationPlanId,
+            yearId,
+            cancellationToken);
+
+        return price?.Amount;
+    }
+
+    private static SettlementItem CreateSettlementItem(
+        SettlementGroupKey key,
+        int candidateCount,
+        GroupCalculation calculation,
+        Agency agency)
+    {
+        return new SettlementItem
+        {
+            PackageId =
+                key.PackageId,
+
+            EducationalLevelId =
+                key.EducationalLevelId,
+
+            ExamModeId =
+                key.ExamModeId,
+
+            RegistrationPlanId =
+                key.RegistrationPlanId,
+
+            YearId =
+                key.YearId,
+
+            StudyFieldId =
+                key.StudyFieldId,
+
+            PersianExecutionDate =
+                key.PersianExecutionDate,
+
+            AgencyId =
+                key.AgencyId,
+
+            CandidateCount =
+                candidateCount,
+
+            FreeCandidateCount =
+                calculation.FreeCandidateCount,
+
+            PaidCandidateCount =
+                calculation.PaidCandidateCount,
+
+            FreeQuotaCount =
+                key.RegistrationPlanId == FreeVolunteerPlanId
+                    ? agency.FreeQuotaCount
+                    : 0,
+
+            OneHundredThousandQuotaCount =
+                key.RegistrationPlanId == FreeVolunteerPlanId
+                    ? agency.OneHundredThousandQuotaCount
+                    : 0,
+
+            ContractFloorAmount =
+                agency.ContractFloorAmount,
+
+            UnitPrice =
+                calculation.UnitPrice,
+
+            BaseAmount =
+                calculation.BaseAmount,
+
+            AgencyPercent =
+                calculation.AgencyPercent,
+
+            GajPercent =
+                calculation.GajPercent,
+
+            StudentPercent =
+                calculation.StudentPercent,
+
+            AgencyAmount =
+                calculation.AgencyAmount,
+
+            GajAmount =
+                calculation.GajAmount,
+
+            StudentAmount =
+                calculation.StudentAmount,
+
+            DebitAmount =
+                calculation.DebitAmount,
+
+            CreditAmount =
+                calculation.CreditAmount,
+
+            CreatedAt =
+                DateTime.UtcNow
         };
+    }
 
     private static decimal CalculateShare(
         decimal baseAmount,
         decimal percent)
-        => baseAmount * percent / 100m;
+    {
+        return baseAmount *
+               percent /
+               100m;
+    }
 
     private static void ValidateRequest(
-        
         CalculateSettlementCommand command)
     {
         if (command.Request.AgencyId <= 0)
+        {
             throw new ArgumentException(
                 "AgencyId نامعتبر است.");
+        }
 
         if (command.Request.YearId <= 0)
+        {
             throw new ArgumentException(
                 "YearId نامعتبر است.");
+        }
 
         if (string.IsNullOrWhiteSpace(
             command.Request.PersianExecutionDate))
@@ -348,448 +541,298 @@ public sealed class CalculateSettlementCommandHandler
     {
         return new SettlementResultDto
         {
-            SettlementId = settlement.Id,
-            AgencyId = settlement.AgencyId,
-            TotalDebit = settlement.TotalDebit,
-            TotalCredit = settlement.TotalCredit,
-            Balance = settlement.Balance,
-            TotalDebitGaj = settlement.TotalDebitGaj,
-            TotalCreditGaj = settlement.TotalCreditGaj,
-            BalanceGaj = settlement.BalanceGaj,
+            SettlementId =
+                settlement.Id,
+
+            AgencyId =
+                settlement.AgencyId,
+
+            ContractFloorAmount =
+                settlement.ContractFloorAmount,
+
+            TotalDebit =
+                settlement.TotalDebit,
+
+            TotalCredit =
+                settlement.TotalCredit,
+
+            Balance =
+                settlement.Balance,
+
+            TotalDebitGaj =
+                settlement.TotalDebitGaj,
+
+            TotalCreditGaj =
+                settlement.TotalCreditGaj,
+
+            BalanceGaj =
+                settlement.BalanceGaj,
+
             PersianExecutionDate =
                 settlement.PersianExecutionDate,
 
-            Items = settlement.Items
-                .Select(x => new SettlementItemResultDto
-                {
-                    PackageId = x.PackageId,
-                    EducationalLevelId =
-                        x.EducationalLevelId,
-                    StudyFieldId = x.StudyFieldId,
-                    ExamModeId = x.ExamModeId,
-                    RegistrationPlanId =
-                        x.RegistrationPlanId,
-                    YearId = x.YearId,
-                    CandidateCount = x.CandidateCount,
-                    FreeCandidateCount =
-                        x.FreeCandidateCount,
-                    PaidCandidateCount =
-                        x.PaidCandidateCount,
-                    UnitPrice = x.UnitPrice,
-                    BaseAmount = x.BaseAmount,
-                    AgencyPercent = x.AgencyPercent,
-                    GajPercent = x.GajPercent,
-                    StudentPercent = x.StudentPercent,
-                    AgencyAmount = x.AgencyAmount,
-                    GajAmount = x.GajAmount,
-                    StudentAmount = x.StudentAmount,
-                    DebitAmount = x.DebitAmount,
-                    CreditAmount = x.CreditAmount,
-                    PersianExecutionDate =
-                        x.PersianExecutionDate
-                })
-                .ToList()
+            Items =
+                settlement.Items
+                    .Select(
+                        x => new SettlementItemResultDto
+                        {
+                            PackageId =
+                                x.PackageId,
+
+                            EducationalLevelId =
+                                x.EducationalLevelId,
+
+                            StudyFieldId =
+                                x.StudyFieldId,
+
+                            ExamModeId =
+                                x.ExamModeId,
+
+                            RegistrationPlanId =
+                                x.RegistrationPlanId,
+
+                            YearId =
+                                x.YearId,
+
+                            CandidateCount =
+                                x.CandidateCount,
+
+                            FreeCandidateCount =
+                                x.FreeCandidateCount,
+
+                            PaidCandidateCount =
+                                x.PaidCandidateCount,
+
+                            FreeQuotaCount =
+                                x.FreeQuotaCount,
+
+                            OneHundredThousandQuotaCount =
+                                x.OneHundredThousandQuotaCount,
+
+                            ContractFloorAmount =
+                                x.ContractFloorAmount,
+
+                            UnitPrice =
+                                x.UnitPrice,
+
+                            BaseAmount =
+                                x.BaseAmount,
+
+                            AgencyPercent =
+                                x.AgencyPercent,
+
+                            GajPercent =
+                                x.GajPercent,
+
+                            StudentPercent =
+                                x.StudentPercent,
+
+                            AgencyAmount =
+                                x.AgencyAmount,
+
+                            GajAmount =
+                                x.GajAmount,
+
+                            StudentAmount =
+                                x.StudentAmount,
+
+                            DebitAmount =
+                                x.DebitAmount,
+
+                            CreditAmount =
+                                x.CreditAmount,
+
+                            PersianExecutionDate =
+                                x.PersianExecutionDate
+                        })
+                    .ToList()
         };
     }
+
+    private sealed record SettlementGroupKey(
+        int PackageId,
+        int EducationalLevelId,
+        int ExamModeId,
+        int RegistrationPlanId,
+        int StudyFieldId,
+        int YearId,
+        int AgencyId,
+        string PersianExecutionDate);
+
+    private sealed class Plan5QuotaState
+    {
+        public Plan5QuotaState(
+            int freeQuotaCount,
+            int oneHundredThousandQuotaCount)
+        {
+            RemainingFreeQuota =
+                Math.Max(0, freeQuotaCount);
+
+            RemainingOneHundredThousandQuota =
+                Math.Max(0, oneHundredThousandQuotaCount);
+        }
+
+        public int RemainingFreeQuota { get; set; }
+
+        public int RemainingOneHundredThousandQuota { get; set; }
+    }
+
+    private sealed record GroupCalculation(
+        bool IsValid,
+        int FreeCandidateCount,
+        int PaidCandidateCount,
+        decimal UnitPrice,
+        decimal BaseAmount,
+        decimal AgencyPercent,
+        decimal GajPercent,
+        decimal StudentPercent,
+        decimal AgencyAmount,
+        decimal GajAmount,
+        decimal StudentAmount,
+        decimal DebitAmount,
+        decimal CreditAmount,
+        decimal TotalCreditGaj)
+    {
+        public static GroupCalculation Invalid()
+        {
+            return new GroupCalculation(
+                false,
+                0,
+                0,
+                0m,
+                0m,
+                0m,
+                0m,
+                0m,
+                0m,
+                0m,
+                0m,
+                0m,
+                0m,
+                0m);
+        }
+
+        public static GroupCalculation Free(
+            int candidateCount,
+            decimal unitPrice)
+        {
+            return new GroupCalculation(
+                true,
+                candidateCount,
+                0,
+                unitPrice,
+                0m,
+                0m,
+                0m,
+                0m,
+                0m,
+                0m,
+                0m,
+                0m,
+                0m,
+                0m);
+        }
+
+        public static GroupCalculation Debit(
+            int candidateCount,
+            int freeCandidateCount,
+            int paidCandidateCount,
+            decimal unitPrice,
+            decimal baseAmount)
+        {
+            return new GroupCalculation(
+                true,
+                freeCandidateCount,
+                paidCandidateCount,
+                unitPrice,
+                baseAmount,
+                0m,
+                0m,
+                0m,
+                baseAmount,
+                baseAmount,
+                0m,
+                baseAmount,
+                0m,
+                0m);
+        }
+
+        public static GroupCalculation Credit(
+            int candidateCount,
+            decimal unitPrice,
+            decimal baseAmount)
+        {
+            return new GroupCalculation(
+                true,
+                0,
+                candidateCount,
+                unitPrice,
+                baseAmount,
+                0m,
+                0m,
+                0m,
+                baseAmount,
+                baseAmount,
+                0m,
+                0m,
+                baseAmount,
+                0m);
+        }
+
+        public static GroupCalculation Regular(
+            int candidateCount,
+            decimal unitPrice,
+            decimal baseAmount,
+            decimal agencyPercent,
+            decimal gajPercent,
+            decimal studentPercent,
+            decimal agencyAmount,
+            decimal gajAmount,
+            decimal studentAmount)
+        {
+            return new GroupCalculation(
+                true,
+                0,
+                candidateCount,
+                unitPrice,
+                baseAmount,
+                agencyPercent,
+                gajPercent,
+                studentPercent,
+                gajAmount,
+                agencyAmount,
+                studentAmount,
+                agencyAmount,
+                0m,
+                gajAmount);
+        }
+
+        public static GroupCalculation Site(
+            int candidateCount,
+            decimal unitPrice,
+            decimal baseAmount,
+            decimal agencyPercent,
+            decimal gajPercent,
+            decimal studentPercent,
+            decimal agencyAmount,
+            decimal gajAmount,
+            decimal studentAmount)
+        {
+            return new GroupCalculation(
+                true,
+                0,
+                candidateCount,
+                unitPrice,
+                baseAmount,
+                agencyPercent,
+                gajPercent,
+                studentPercent,
+                gajAmount,
+                agencyAmount,
+                studentAmount,
+                0m,
+                agencyAmount,
+                0m);
+        }
+    }
 }
-
-
-
-
-//using AgencySettlement.Application.Abstractions.External;
-//using AgencySettlement.Application.Abstractions.Persistence.Repositories;
-//using AgencySettlement.Application.Settlements.Commands;
-//using AgencySettlement.Domain.Entities;
-//using MediatR;
-
-//namespace AgencySettlement.Application.Features.Settlements.Handlers;
-
-
-//public sealed class CalculateSettlementCommandHandler
-//    : IRequestHandler<CalculateSettlementCommand, SettlementResultDto>
-//{
-//    private readonly IExternalExamRecordRepository _externalRepository;
-//    private readonly IPriceRepository _priceRepository;
-//    private readonly IPercentRuleRepository _percentRepository;
-//    private readonly IAgencyRepository _agencyRepository;
-//    private readonly ISettlementRepository _settlementRepository;
-//    private readonly ISettlementHistoryRepository _historyRepository;
-
-//    public CalculateSettlementCommandHandler(
-//        IExternalExamRecordRepository externalRepository,
-//        IPriceRepository priceRepository,
-//        IPercentRuleRepository percentRepository,
-//        IAgencyRepository agencyRepository,
-//        ISettlementRepository settlementRepository,
-//        ISettlementHistoryRepository historyRepository)
-//    {
-//        _externalRepository = externalRepository;
-//        _priceRepository = priceRepository;
-//        _percentRepository = percentRepository;
-//        _agencyRepository = agencyRepository;
-//        _settlementRepository = settlementRepository;
-//        _historyRepository = historyRepository;
-//    }
-
-//    public async Task<SettlementResultDto> Handle(
-//        CalculateSettlementCommand command,
-//        CancellationToken cancellationToken)
-//    {
-//        ValidateRequest(command);
-
-//        var request = command.Request;
-
-//        var records = await _externalRepository
-//            .GetByAgencyAndYearAsync(
-//                request.AgencyId,
-//                request.YearId,
-//                cancellationToken);
-
-//        if (records.Count == 0)
-//        {
-//            throw new InvalidOperationException(
-//                "هیچ رکوردی برای این نماینده و سال پیدا نشد.");
-//        }
-
-//        var agency = await _agencyRepository.GetByIdAsync(
-//            request.AgencyId,
-//            cancellationToken);
-
-//        if (agency is null)
-//        {
-//            throw new InvalidOperationException(
-//                "نماینده پیدا نشد.");
-//        }
-
-//        var settlement = new Settlement
-//        {
-//            AgencyId = request.AgencyId,
-//            YearId = request.YearId,
-//            CreatedAt = DateTime.UtcNow
-//        };
-
-//        decimal totalDebit = 0m;
-//        decimal totalCredit = 0m;
-//        decimal totalCreditGaj = 0m;
-
-//        // اولویت مصرف سهمیه: اول ۵ (داوطلب آزاد) بعد ۳ (مدارس)
-//        var groups = records
-//            .GroupBy(x => new
-//            {
-//                x.PackageId,
-//                x.EducationalLevelId,
-//                x.ExamModeId,
-//                x.RegistrationPlanId,
-//                x.StudyFieldId,
-//                x.YearId,
-//                x.AgencyId,
-//                x.PersianExecutionDate
-//            })
-//            .OrderBy(x => GetQuotaPriority(x.Key.RegistrationPlanId));
-
-//        foreach (var group in groups)
-//        {
-//            var price = await _priceRepository.GetAsync(
-//                group.Key.PackageId,
-//                group.Key.EducationalLevelId,
-//                group.Key.ExamModeId,
-//                group.Key.RegistrationPlanId,
-//                group.Key.YearId,
-//                cancellationToken);
-
-//            if (price is null)
-//                continue;
-
-//            var candidateCount = group.Count();
-//            var planId = group.Key.RegistrationPlanId;
-//            var isQuotaPlan = IsFreeQuotaPlan(planId); // فقط ۳ و ۵
-
-//            // فقط وقتی RegistrationPlanId برابر ۳ یا ۵ و ExamModeId = 1 باشد → همیشه رایگان
-//            var isAlwaysFree = isQuotaPlan && group.Key.ExamModeId == 1;
-
-//            // -------------------------------------------------
-//            // سهمیه رایگان فقط و فقط برای RegistrationPlanId = 3 و 5
-//            // -------------------------------------------------
-//            var freeQuotaCount = 0;
-//            if (isQuotaPlan && !isAlwaysFree)
-//            {
-//                freeQuotaCount = await _agencyRepository.ConsumeFreeQuotaAsync(
-//                    request.AgencyId,
-//                    candidateCount,
-//                    cancellationToken);
-//            }
-//            else if (isAlwaysFree)
-//            {
-//                freeQuotaCount = candidateCount;
-//            }
-
-//            var paidCandidateCount = candidateCount - freeQuotaCount;
-
-//            var unitPrice = price.Amount;
-//            var baseAmount = candidateCount * unitPrice;
-//            var paidBaseAmount = paidCandidateCount * unitPrice;
-
-//            decimal gajAmount = 0m;
-//            decimal agencyAmount = 0m;
-//            decimal studentAmount = 0m;
-//            decimal debitAmount = 0m;
-//            decimal creditAmount = 0m;
-//            decimal agencyPercent = 0m;
-//            decimal gajPercent = 0m;
-//            decimal studentPercent = 0m;
-
-//            if (isQuotaPlan)
-//            {
-//                // -------------------------------------------------
-//                // طرح ۳ و ۵ (بورسیه)
-//                // - قیمت ثابت
-//                // - فقط TotalDebit (بدهکار)
-//                // - هیچ‌وقت به TotalCreditGaj اضافه نمی‌شود
-//                // -------------------------------------------------
-//                gajAmount = paidBaseAmount;
-//                agencyAmount = paidBaseAmount;
-//                studentAmount = 0m;
-
-//                debitAmount = paidBaseAmount;
-//                creditAmount = 0m;
-
-//                totalDebit += debitAmount;
-//            }
-//            else if (planId == 2)
-//            {
-//                // -------------------------------------------------
-//                // طرح ۲ (حکمت)
-//                // - قیمت ثابت (درصد ندارد)
-//                // - فقط TotalCredit (بستانکار)
-//                // - هیچ‌وقت به TotalCreditGaj اضافه نمی‌شود
-//                // -------------------------------------------------
-//                gajAmount = baseAmount;
-//                agencyAmount = baseAmount;
-//                studentAmount = 0m;
-
-//                debitAmount = 0m;
-//                creditAmount = baseAmount;
-
-//                totalCredit += creditAmount;
-//            }
-//            else
-//            {
-//                // -------------------------------------------------
-//                // طرح ۱ و ۸ → منطق درصد
-//                // طرح ۱: بدهکار + TotalCreditGaj
-//                // طرح ۸: دقیقاً مثل ۱ ولی بستانکار (TotalCredit) و بدون TotalCreditGaj
-//                // -------------------------------------------------
-//                var percent = await _percentRepository.GetAsync(
-//                    request.AgencyId,
-//                    group.Key.ExamModeId,
-//                    cancellationToken);
-
-//                if (percent is null)
-//                    continue;
-
-//                agencyPercent = percent.AgencyPercent;
-//                gajPercent = percent.GajPercent;
-//                studentPercent = percent.StudentPercent;
-
-//                // درصد بالاتر = سهم گاج
-//                gajAmount = CalculateShare(baseAmount, percent.AgencyPercent);
-
-//                // درصد پایین‌تر = سهم نماینده
-//                agencyAmount = CalculateShare(baseAmount, percent.GajPercent);
-
-//                studentAmount = CalculateShare(baseAmount, percent.StudentPercent);
-
-//                if (planId == 1)
-//                {
-//                    // آزاد → بدهکار + سهم گاج
-//                    debitAmount = agencyAmount;
-//                    creditAmount = 0m;
-
-//                    totalDebit += debitAmount;
-//                    totalCreditGaj += gajAmount;
-//                }
-//                else if (planId == 8)
-//                {
-//                    // ثبت‌نام از سایت → دقیقاً مثل ۱ ولی بستانکار
-//                    debitAmount = 0m;
-//                    creditAmount = agencyAmount;
-
-//                    totalCredit += creditAmount;
-//                    // عمداً totalCreditGaj اضافه نمی‌شود
-//                }
-//            }
-
-//            // ---------------------------------------------
-//            // Settlement Item
-//            // ---------------------------------------------
-//            settlement.Items.Add(
-//                new SettlementItem
-//                {
-//                    PackageId = group.Key.PackageId,
-//                    EducationalLevelId = group.Key.EducationalLevelId,
-//                    ExamModeId = group.Key.ExamModeId,
-//                    RegistrationPlanId = group.Key.RegistrationPlanId,
-//                    YearId = group.Key.YearId,
-//                    StudyFieldId = group.Key.StudyFieldId,
-//                    PersianExecutionDate = group.Key.PersianExecutionDate,
-//                    AgencyId = group.Key.AgencyId,
-//                    CandidateCount = candidateCount,
-//                    FreeCandidateCount = freeQuotaCount,
-//                    PaidCandidateCount = paidCandidateCount,
-//                    UnitPrice = unitPrice,
-//                    BaseAmount = baseAmount,
-//                    AgencyPercent = agencyPercent,
-//                    GajPercent = gajPercent,
-//                    StudentPercent = studentPercent,
-//                    AgencyAmount = gajAmount,
-//                    GajAmount = agencyAmount,
-//                    StudentAmount = studentAmount,
-//                    DebitAmount = debitAmount,
-//                    CreditAmount = creditAmount,
-//                    CreatedAt = DateTime.UtcNow
-//                });
-//        }
-
-//        if (settlement.Items.Count == 0)
-//        {
-//            throw new InvalidOperationException(
-//                "هیچ ترکیبی دارای قیمت و درصد معتبر برای محاسبه نبود.");
-//        }
-
-//        // ---------------------------------------------
-//        // مبلغ نهایی نماینده
-//        // ---------------------------------------------
-//        settlement.TotalDebit = Math.Max(0m, totalDebit);
-//        settlement.TotalCredit = Math.Max(0m, totalCredit);
-//        settlement.Balance = settlement.TotalDebit - settlement.TotalCredit;
-
-//        // ---------------------------------------------
-//        // حساب گاج
-//        // ---------------------------------------------
-//        settlement.TotalDebitGaj = settlement.TotalCredit;
-//        settlement.TotalCreditGaj = totalCreditGaj;
-//        settlement.BalanceGaj = Math.Max(0m, settlement.TotalCreditGaj - settlement.TotalDebit);
-
-//        // ---------------------------------------------
-//        // تاریخ اجرا
-//        // ---------------------------------------------
-//        settlement.PersianExecutionDate =
-//            settlement.Items
-//                .Select(x => x.PersianExecutionDate)
-//                .FirstOrDefault()
-//            ?? string.Empty;
-
-//        // ---------------------------------------------
-//        // ذخیره Settlement
-//        // ---------------------------------------------
-//        await _settlementRepository.AddAsync(settlement, cancellationToken);
-//        await _settlementRepository.SaveChangesAsync(cancellationToken);
-
-//        // ---------------------------------------------
-//        // History
-//        // ---------------------------------------------
-//        var history = new SettlementHistory
-//        {
-//            SettlementId = settlement.Id,
-//            AgencyId = settlement.AgencyId,
-//            YearId = settlement.YearId,
-//            PersianExecutionDate = settlement.PersianExecutionDate,
-//            TotalDebit = settlement.TotalDebit,
-//            TotalCredit = settlement.TotalCredit,
-//            Balance = settlement.Balance,
-//            TotalDebitGaj = settlement.TotalDebitGaj,
-//            TotalCreditGaj = settlement.TotalCreditGaj,
-//            BalanceGaj = settlement.BalanceGaj,
-//            CreatedAt = DateTime.UtcNow,
-//            Description = "محاسبه Settlement نماینده"
-//        };
-
-//        await _historyRepository.AddAsync(history, cancellationToken);
-//        await _settlementRepository.SaveChangesAsync(cancellationToken);
-
-//        return CreateResult(settlement);
-//    }
-
-//    /// <summary>
-//    /// سهمیه رایگان فقط مختص طرح‌های ۳ و ۵ است.
-//    /// </summary>
-//    private static bool IsFreeQuotaPlan(int registrationPlanId)
-//        => registrationPlanId is 3 or 5;
-
-//    /// <summary>
-//    /// اولویت مصرف سهمیه: اول ۵ بعد ۳
-//    /// </summary>
-//    private static int GetQuotaPriority(int registrationPlanId)
-//        => registrationPlanId switch
-//        {
-//            5 => 1,
-//            3 => 2,
-//            _ => 4
-//        };
-
-//    private static decimal CalculateShare(decimal baseAmount, decimal percent)
-//        => baseAmount * percent / 100m;
-
-//    private static void ValidateRequest(CalculateSettlementCommand command)
-//    {
-//        if (command.Request.AgencyId <= 0)
-//            throw new ArgumentException("AgencyId نامعتبر است.");
-
-//        if (command.Request.YearId <= 0)
-//            throw new ArgumentException("YearId نامعتبر است.");
-//    }
-
-//    private static SettlementResultDto CreateResult(Settlement settlement)
-//    {
-//        return new SettlementResultDto
-//        {
-//            SettlementId = settlement.Id,
-//            AgencyId = settlement.AgencyId,
-//            TotalDebit = settlement.TotalDebit,
-//            TotalCredit = settlement.TotalCredit,
-//            Balance = settlement.Balance,
-//            TotalDebitGaj = settlement.TotalDebitGaj,
-//            TotalCreditGaj = settlement.TotalCreditGaj,
-//            BalanceGaj = settlement.BalanceGaj,
-//            PersianExecutionDate = settlement.PersianExecutionDate,
-//            Items = settlement.Items
-//                .Select(x => new SettlementItemResultDto
-//                {
-//                    PackageId = x.PackageId,
-//                    EducationalLevelId = x.EducationalLevelId,
-//                    StudyFieldId = x.StudyFieldId,
-//                    ExamModeId = x.ExamModeId,
-//                    RegistrationPlanId = x.RegistrationPlanId,
-//                    YearId = x.YearId,
-//                    CandidateCount = x.CandidateCount,
-//                    FreeCandidateCount = x.FreeCandidateCount,
-//                    PaidCandidateCount = x.PaidCandidateCount,
-//                    UnitPrice = x.UnitPrice,
-//                    BaseAmount = x.BaseAmount,
-//                    AgencyPercent = x.AgencyPercent,
-//                    GajPercent = x.GajPercent,
-//                    StudentPercent = x.StudentPercent,
-//                    AgencyAmount = x.AgencyAmount,
-//                    GajAmount = x.GajAmount,
-//                    StudentAmount = x.StudentAmount,
-//                    DebitAmount = x.DebitAmount,
-//                    CreditAmount = x.CreditAmount,
-//                    PersianExecutionDate = x.PersianExecutionDate
-//                })
-//                .ToList()
-//        };
-//    }
-//}
-
-
-
-
-
-
-
-
-
-
-
-
-

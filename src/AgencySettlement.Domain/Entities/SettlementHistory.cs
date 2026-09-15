@@ -13,6 +13,7 @@ namespace AgencySettlement.Domain.Entities
         public long SettlementId { get; set; }
 
         public int AgencyId { get; set; }
+
         public int YearId { get; set; }
 
         public decimal TotalDebit { get; set; }
@@ -24,6 +25,7 @@ namespace AgencySettlement.Domain.Entities
         public DateTime CreatedAt { get; set; }
 
         public string? Description { get; set; }
+
         public string PersianExecutionDate { get; set; } = string.Empty;
 
         public decimal TotalDebitGaj { get; set; }
@@ -31,5 +33,7 @@ namespace AgencySettlement.Domain.Entities
         public decimal TotalCreditGaj { get; set; }
 
         public decimal BalanceGaj { get; set; }
+
+        public decimal ContractFloorAmount { get; set; }
     }
 }

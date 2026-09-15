@@ -1,15 +1,9 @@
 ﻿using AgencySettlement.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AgencySettlement.Infrastructure.Persistence.Configurations
 {
-
     internal sealed class SettlementConfiguration
         : IEntityTypeConfiguration<Settlement>
     {
@@ -29,6 +23,23 @@ namespace AgencySettlement.Infrastructure.Persistence.Configurations
             builder.Property(x => x.Balance)
                 .HasPrecision(19, 4);
 
+            builder.Property(x => x.TotalDebitGaj)
+                .HasPrecision(19, 4);
+
+            builder.Property(x => x.TotalCreditGaj)
+                .HasPrecision(19, 4);
+
+            builder.Property(x => x.BalanceGaj)
+                .HasPrecision(19, 4);
+
+            builder.Property(x => x.ContractFloorAmount)
+                .HasPrecision(18, 2)
+                .IsRequired();
+
+            builder.Property(x => x.PersianExecutionDate)
+                .HasMaxLength(20)
+                .IsRequired();
+
             builder.Property(x => x.CreatedAt)
                 .IsRequired();
 
@@ -36,18 +47,6 @@ namespace AgencySettlement.Infrastructure.Persistence.Configurations
                 .WithOne()
                 .HasForeignKey(x => x.SettlementId)
                 .OnDelete(DeleteBehavior.Cascade);
-
-            builder.Property(x => x.TotalDebitGaj)
-    .HasPrecision(19, 4);
-
-            builder.Property(x => x.TotalCreditGaj)
-                .HasPrecision(19, 4);
-
-            builder.Property(x => x.PersianExecutionDate)
-                .HasMaxLength(20)
-                .IsRequired();
-            builder.Property(x => x.BalanceGaj)
-    .HasPrecision(19, 4);
 
             builder.HasIndex(x => new
             {
