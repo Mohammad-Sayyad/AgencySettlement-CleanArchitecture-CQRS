@@ -327,13 +327,83 @@ public sealed class CalculateSettlementCommandHandler
             baseAmount);
     }
 
-    private async Task<GroupCalculation> CalculateRegularOrSiteAsync(
-        int registrationPlanId,
-        int examModeId,
-        int candidateCount,
-        decimal unitPrice,
-        int agencyId,
-        CancellationToken cancellationToken)
+    //private async Task<GroupCalculation> CalculateRegularOrSiteAsync(
+    //    int registrationPlanId,
+    //    int examModeId,
+    //    int candidateCount,
+    //    decimal unitPrice,
+    //    int agencyId,
+    //    CancellationToken cancellationToken)
+    //{
+    //    var percent =
+    //        await _percentRepository.GetAsync(
+    //            agencyId,
+    //            examModeId,
+    //            cancellationToken);
+
+    //    if (percent is null)
+    //    {
+    //        return GroupCalculation.Invalid();
+    //    }
+
+    //    var baseAmount =
+    //        candidateCount *
+    //        unitPrice;
+
+    //    var gajAmount =
+    //        CalculateShare(
+    //            baseAmount,
+    //            percent.AgencyPercent);
+
+    //    var agencyAmount =
+    //        CalculateShare(
+    //            baseAmount,
+    //            percent.GajPercent);
+
+    //    var studentAmount =
+    //        CalculateShare(
+    //            baseAmount,
+    //            percent.StudentPercent);
+
+    //    if (registrationPlanId == RegularPlanId)
+    //    {
+    //        return GroupCalculation.Regular(
+    //            candidateCount,
+    //            unitPrice,
+    //            baseAmount,
+    //            percent.AgencyPercent,
+    //            percent.GajPercent,
+    //            percent.StudentPercent,
+    //            agencyAmount,
+    //            gajAmount,
+    //            studentAmount);
+    //    }
+
+    //    if (registrationPlanId == SiteRegistrationPlanId)
+    //    {
+    //        return GroupCalculation.Site(
+    //            candidateCount,
+    //            unitPrice,
+    //            baseAmount,
+    //            percent.AgencyPercent,
+    //            percent.GajPercent,
+    //            percent.StudentPercent,
+    //            agencyAmount,
+    //            gajAmount,
+    //            studentAmount);
+    //    }
+
+    //    return GroupCalculation.Invalid();
+    //}
+
+
+private async Task<GroupCalculation> CalculateRegularOrSiteAsync(
+    int registrationPlanId,
+    int examModeId,
+    int candidateCount,
+    decimal unitPrice,
+    int agencyId,
+    CancellationToken cancellationToken)
     {
         var percent =
             await _percentRepository.GetAsync(
@@ -350,15 +420,19 @@ public sealed class CalculateSettlementCommandHandler
             candidateCount *
             unitPrice;
 
-        var gajAmount =
-            CalculateShare(
-                baseAmount,
-                percent.AgencyPercent);
-
         var agencyAmount =
             CalculateShare(
                 baseAmount,
-                percent.GajPercent);
+                registrationPlanId == SiteRegistrationPlanId
+                    ? percent.AgencyPercent
+                    : percent.GajPercent);
+
+        var gajAmount =
+            CalculateShare(
+                baseAmount,
+                registrationPlanId == SiteRegistrationPlanId
+                    ? percent.GajPercent
+                    : percent.AgencyPercent);
 
         var studentAmount =
             CalculateShare(
@@ -395,6 +469,8 @@ public sealed class CalculateSettlementCommandHandler
 
         return GroupCalculation.Invalid();
     }
+
+
 
     private async Task<decimal?> GetUnitPriceAsync(
         int packageId,

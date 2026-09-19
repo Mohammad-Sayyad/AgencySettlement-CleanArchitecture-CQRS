@@ -2,6 +2,7 @@
 using AgencySettlement.Application.ExternalExams.Commands;
 using AgencySettlement.Application.ExternalExams.Commands.ImportExternalExams;
 using AgencySettlement.Application.ExternalExamsFeatures.Queris.GetExternalSettlementStatusQuery;
+using AgencySettlement.Application.ExternalExamsFeatures.Queris.GetSettlementDatesQuery;
 using AgencySettlement.Application.Settlements.Queries.DebtQuery;
 using AgencySettlement.Application.Settlements.Queries.PaymentQuery;
 using MediatR;
@@ -93,5 +94,23 @@ public sealed class ExternalExamsController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpGet("agencies-exam-dates")]
+    public async Task<IActionResult> GetAgenciesDates(
+           [FromQuery] int agencyId,
+           [FromQuery] int yearId,
+           CancellationToken cancellationToken)
+    {
+        var result =
+            await _mediator.Send(
+                new GetPersianAgenciesnDatesQuery(
+                    agencyId,
+                    yearId
+                    ),
+                cancellationToken);
+
+        return Ok(result);
+    }
+
 }
 
