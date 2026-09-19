@@ -1,6 +1,7 @@
 ﻿using AgencySettlement.Application.DTOs;
 using AgencySettlement.Application.ExternalExams.Commands;
 using AgencySettlement.Application.ExternalExams.Commands.ImportExternalExams;
+using AgencySettlement.Application.ExternalExamsFeatures.Commands.CreateSettlementPaymentCommand;
 using AgencySettlement.Application.ExternalExamsFeatures.Queris.GetExternalSettlementStatusQuery;
 using AgencySettlement.Application.ExternalExamsFeatures.Queris.GetSettlementDatesQuery;
 using AgencySettlement.Application.Settlements.Queries.DebtQuery;
@@ -108,6 +109,19 @@ public sealed class ExternalExamsController : ControllerBase
                     yearId
                     ),
                 cancellationToken);
+
+        return Ok(result);
+    }
+
+
+    [HttpPost("add-payment")]
+    public async Task<IActionResult> Create(
+       [FromBody] CreateSettlementPaymentCommand command,
+       CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(
+            command,
+            cancellationToken);
 
         return Ok(result);
     }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AgencySettlement.Domain.Entities;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,5 +14,21 @@ namespace AgencySettlement.Application.Abstractions.External
             int yearId,
             string persianExecutionDate,
             CancellationToken cancellationToken);
+
+        Task AddSettlementPaymentAsync(
+    SettlementPayment payment,
+    CancellationToken cancellationToken);
+
+        Task<Settlement?> GetSettlementByIdAsync(
+            long settlementId,
+            CancellationToken cancellationToken);
+
+        IQueryable<SettlementPayment> GetSettlementPayments();
+
+        Task<Settlement?> GetSettlementByAgencyAndDateAsync(
+    int agencyId,
+    int yearId,
+    string persianExecutionDate,
+    CancellationToken cancellationToken);
     }
 }

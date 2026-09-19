@@ -28,6 +28,8 @@ public sealed class AgencySettlementDbContext(DbContextOptions<AgencySettlementD
     public DbSet<User> Users { get; set; }
     public DbSet<SettlementItem> SettlementItems { get; set; }
     public DbSet<SettlementPaymentPeriod> SettlementPaymentPeriods { get; set; }
+    public DbSet<SettlementPayment> SettlementPayments { get; set; }
+
 
     //protected override void OnModelCreating(ModelBuilder modelBuilder) =>
     //    modelBuilder.ApplyConfigurationsFromAssembly(typeof(AgencySettlementDbContext).Assembly);
