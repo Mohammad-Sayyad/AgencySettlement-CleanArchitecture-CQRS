@@ -24,6 +24,7 @@ namespace AgencySettlement.Application.DTOs.ExternalDtos
         public string StatusTitle { get; set; } = string.Empty;
 
         public decimal DebtAmount { get; set; }
+        public decimal Balance { get; set; }
         public SettlementPaymentStatus PaymentStatus { get; set; }
     }
 }

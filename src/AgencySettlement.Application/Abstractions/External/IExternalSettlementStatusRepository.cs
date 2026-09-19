@@ -15,5 +15,12 @@ namespace AgencySettlement.Application.Abstractions.External
        int yearId,
        string persianExecutionDate,
        CancellationToken cancellationToken);
+
+        Task<List<string>> GetPersianAgenciesnDatesAsync(
+    int agencyId,
+    int yearId,
+    CancellationToken cancellationToken);
     }
+
+
 }

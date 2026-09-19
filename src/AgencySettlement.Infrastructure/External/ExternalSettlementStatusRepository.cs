@@ -36,6 +36,7 @@ public sealed class ExternalSettlementStatusRepository
 
                 x.Id,
                 x.AgencyId,
+                x.Balance,
                 x.YearId,
                 x.PersianExecutionDate,
                 x.TotalDebit
@@ -63,7 +64,8 @@ public sealed class ExternalSettlementStatusRepository
             PersianExecutionDate = paymentStartDate,
             PaymentDeadline = paymentDeadlineDate,
             PaymentStatus = paymentStatus,
-            DebtAmount = settlement.TotalDebit
+            DebtAmount = settlement.TotalDebit,
+            Balance = settlement.Balance
         };
     }
     //
@@ -125,6 +127,24 @@ public sealed class ExternalSettlementStatusRepository
             0,
             0,
             0);
+    }
+
+
+    public async Task<List<string>> GetPersianAgenciesnDatesAsync(
+    int agencyId,
+    int yearId,
+    CancellationToken cancellationToken)
+    {
+        return await _context.Settlements
+            .AsNoTracking()
+            .Where(x =>
+                x.AgencyId == agencyId &&
+                x.YearId == yearId &&
+                !string.IsNullOrWhiteSpace(x.PersianExecutionDate))
+            .Select(x => x.PersianExecutionDate)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToListAsync(cancellationToken);
     }
 
 }
