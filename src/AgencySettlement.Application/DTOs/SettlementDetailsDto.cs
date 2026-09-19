@@ -27,7 +27,7 @@ namespace AgencySettlement.Application.DTOs
         public decimal TotalInPersonSiteGajDebit { get; set; }
         public int TotalStudentPersonSite { get; set; }
 
-        // ///////////
+        // /////////////
         public decimal TotalInPersonScholarshipAgencyDebit { get; set; }
         public decimal TotalInPersonScholarshipGajCredit { get; set; }
 
