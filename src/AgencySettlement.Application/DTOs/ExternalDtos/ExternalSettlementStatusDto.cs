@@ -19,11 +19,11 @@ namespace AgencySettlement.Application.DTOs.ExternalDtos
 
         public string PaymentDeadline { get; set; } = string.Empty;
 
-        public int Status { get; set; }
+        //public int Status { get; set; }
 
         public string StatusTitle { get; set; } = string.Empty;
 
-        public decimal DebtAmount { get; set; }
+        //public decimal DebtAmount { get; set; }
         public decimal Balance { get; set; }
         public SettlementPaymentStatus PaymentStatus { get; set; }
     }

@@ -4,23 +4,32 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AgencySettlement.Infrastructure.Persistence.Configurations;
 
-internal sealed class ExternalExamRecordConfiguration : IEntityTypeConfiguration<ExternalExamRecord>
+public sealed class ExternalExamRecordConfiguration
+    : IEntityTypeConfiguration<ExternalExamRecord>
 {
-    public void Configure(EntityTypeBuilder<ExternalExamRecord> builder)
+    public void Configure(
+        EntityTypeBuilder<ExternalExamRecord> builder)
     {
-        builder.ToTable("ExternalExamRecords", table =>
-        {
-            table.HasCheckConstraint("CK_ExternalExamRecords_CandidateExamId", "[CandidateExamId] > 0");
-        });
+        builder.ToTable("ExternalExamRecords");
+
         builder.HasKey(x => x.Id);
+
+        builder.Property(x => x.PersianExecutionDate)
+            .HasMaxLength(10)
+            .IsRequired();
+
+        builder.Property(x => x.PersianReceivedDate)
+            .HasMaxLength(10)
+            .IsRequired();
+
         builder.HasIndex(x => x.CandidateExamId)
-            .IsUnique()
-            .HasDatabaseName("UX_ExternalExamRecords_CandidateExamId");
+            .IsUnique();
 
-        builder.HasIndex(x => new { x.AgencyId, x.YearId, x.PersianExecutionDate })
-            .HasDatabaseName("IX_ExternalExamRecords_Agency_Year_Date");
-
-        builder.HasIndex(x => new { x.RegistrationPlanId, x.YearId, x.PersianExecutionDate })
-            .HasDatabaseName("IX_ExternalExamRecords_ExamType_Year_Date");
+        builder.HasIndex(x => new
+        {
+            x.AgencyId,
+            x.YearId,
+            x.PersianExecutionDate
+        });
     }
 }

@@ -20,6 +20,14 @@ namespace AgencySettlement.Application.Abstractions.External
     int agencyId,
     int yearId,
     CancellationToken cancellationToken);
+
+
+        Task<SettlementOrderReportDto?> GetSettlementOrderReportAsync(
+    int agencyId,
+    int yearId,
+    string persianExecutionDate,
+    int registrationOrder,
+    CancellationToken cancellationToken);
     }
 
 

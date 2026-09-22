@@ -28,6 +28,22 @@ public sealed class AgencySettlementDbContext(DbContextOptions<AgencySettlementD
     public DbSet<User> Users { get; set; }
     public DbSet<SettlementItem> SettlementItems { get; set; }
     public DbSet<SettlementPaymentPeriod> SettlementPaymentPeriods { get; set; }
+    public DbSet<SettlementPayment> SettlementPayments { get; set; }
+    public DbSet<SettlementOrder> SettlementOrders { get; set; }
+    public DbSet<SettlementOrderItem> SettlementOrderItems { get; set; }
+
+    public DbSet<ExternalExamRecordHistory> ExternalExamRecordHistories
+        => Set<ExternalExamRecordHistory>();
+
+    public DbSet<SettlementFirstOrder> SettlementFirstOrders
+        => Set<SettlementFirstOrder>();
+
+    public DbSet<SettlementFirstOrderItem> SettlementFirstOrderItems
+        => Set<SettlementFirstOrderItem>();
+
+    public DbSet<SettlementFirstOrderPayment> SettlementFirstOrderPayments
+        => Set<SettlementFirstOrderPayment>();
+
 
     //protected override void OnModelCreating(ModelBuilder modelBuilder) =>
     //    modelBuilder.ApplyConfigurationsFromAssembly(typeof(AgencySettlementDbContext).Assembly);

@@ -9,45 +9,86 @@ using System.Threading.Tasks;
 
 namespace AgencySettlement.Infrastructure.Persistence.Repositories
 {
+    //public sealed class SettlementRepository
+    //: ISettlementRepository
+    //{
+    //    private readonly AgencySettlementDbContext _db;
+
+    //    public SettlementRepository(
+    //        AgencySettlementDbContext db)
+    //    {
+    //        _db = db;
+    //    }
+
+    //    public async Task AddAsync(
+    //        Settlement settlement,
+    //        CancellationToken cancellationToken)
+    //    {
+    //        await _db.Settlements.AddAsync(
+    //            settlement,
+    //            cancellationToken);
+    //    }
+
+    //    public async Task SaveChangesAsync(
+    //        CancellationToken cancellationToken)
+    //    {
+    //        await _db.SaveChangesAsync(
+    //            cancellationToken);
+    //    }
+
+
+
+    //    public async Task<List<SettlementItem>> GetSettlementItemsAsync(
+    //   long settlementId,
+    //   CancellationToken cancellationToken)
+    //    {
+    //        return await _db.SettlementItems
+    //            .AsNoTracking()
+    //            .Where(x => x.SettlementId == settlementId)
+    //            .OrderBy(x => x.EducationalLevelId)
+    //            .ThenBy(x => x.StudyFieldId)
+    //            .ToListAsync(cancellationToken);
+    //    }
+    //}
+
+
     public sealed class SettlementRepository
     : ISettlementRepository
     {
-        private readonly AgencySettlementDbContext _db;
+        private readonly AgencySettlementDbContext _context;
 
-        public SettlementRepository(
-            AgencySettlementDbContext db)
+        public SettlementRepository(AgencySettlementDbContext context)
         {
-            _db = db;
+            _context = context;
+        }
+
+        public Task<Settlement?> GetByAgencyAndYearAsync(
+            int agencyId,
+            int yearId,
+            CancellationToken cancellationToken)
+        {
+            return _context.Settlements
+                .Include(x => x.Payments)
+                .FirstOrDefaultAsync(
+                    x =>
+                        x.AgencyId == agencyId &&
+                        x.YearId == yearId,
+                    cancellationToken);
         }
 
         public async Task AddAsync(
-            Settlement settlement,
+            Settlement entity,
             CancellationToken cancellationToken)
         {
-            await _db.Settlements.AddAsync(
-                settlement,
+            await _context.Settlements.AddAsync(
+                entity,
                 cancellationToken);
         }
 
-        public async Task SaveChangesAsync(
+        public Task SaveChangesAsync(
             CancellationToken cancellationToken)
         {
-            await _db.SaveChangesAsync(
-                cancellationToken);
-        }
-
-
-
-        public async Task<List<SettlementItem>> GetSettlementItemsAsync(
-       long settlementId,
-       CancellationToken cancellationToken)
-        {
-            return await _db.SettlementItems
-                .AsNoTracking()
-                .Where(x => x.SettlementId == settlementId)
-                .OrderBy(x => x.EducationalLevelId)
-                .ThenBy(x => x.StudyFieldId)
-                .ToListAsync(cancellationToken);
+            return _context.SaveChangesAsync(cancellationToken);
         }
     }
 }

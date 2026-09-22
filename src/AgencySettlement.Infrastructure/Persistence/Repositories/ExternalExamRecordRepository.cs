@@ -45,6 +45,7 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
          int agencyId,
          int yearId,
          string persianExecutionDate,
+         int registrationOrder,
          CancellationToken cancellationToken)
         {
             return await _db.ExternalExamRecords
@@ -52,8 +53,17 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                 .Where(x =>
                     x.AgencyId == agencyId &&
                     x.YearId == yearId &&
-                    x.PersianExecutionDate == persianExecutionDate)
+                    x.PersianExecutionDate == persianExecutionDate && registrationOrder == x.RegistrationOrder)
                 .ToListAsync(cancellationToken);
+        }
+
+        public async Task AddHistoryRangeAsync(
+    List<ExternalExamRecordHistory> histories,
+    CancellationToken cancellationToken)
+        {
+            await _db.ExternalExamRecordHistories.AddRangeAsync(
+                histories,
+                cancellationToken);
         }
     }
 }

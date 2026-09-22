@@ -9,7 +9,7 @@ internal sealed class PercentConfiguration
 {
     public void Configure(EntityTypeBuilder<Percent> builder)
     {
-        builder.ToTable("Percent", table =>
+        builder.ToTable("Percents", table =>
         {
             table.HasCheckConstraint(
                 "CK_Percent_Total",

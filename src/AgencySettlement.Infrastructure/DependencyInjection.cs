@@ -55,6 +55,11 @@ public static class DependencyInjection
             ISettlementRepository,
             SettlementRepository>();
 
+
+        services.AddScoped<
+    ISettlementOrderRepository,
+    SettlementOrderRepository>();
+
         services.AddScoped<
             ISettlementHistoryRepository,
             SettlementHistoryRepository>();
