@@ -12,5 +12,6 @@ namespace AgencySettlement.Application.DTOs
 
         public int YearId { get; set; }
         public string PersianExecutionDate { get; set; } = string.Empty;
+        public int RegistrationOrder { get; set; }
     }
 }

@@ -10,21 +10,26 @@ namespace AgencySettlement.Application.Abstractions.External
     public interface IExternalExamRecordRepository
     {
         Task<List<ExternalExamRecord>> GetByCandidateExamIdsAsync(
-       List<long> candidateExamIds,
-       CancellationToken cancellationToken);
+            List<long> candidateExamIds,
+            CancellationToken cancellationToken);
 
         Task AddRangeAsync(
             List<ExternalExamRecord> records,
+            CancellationToken cancellationToken);
+
+        Task AddHistoryRangeAsync(
+            List<ExternalExamRecordHistory> histories,
             CancellationToken cancellationToken);
 
         Task SaveChangesAsync(
             CancellationToken cancellationToken);
 
         Task<List<ExternalExamRecord>> GetByAgencyAndYearAsync(
-    int agencyId,
-    int yearId,
-    string persianExecutionDate,
-    CancellationToken cancellationToken);
+            int agencyId,
+            int yearId,
+            string persianExecutionDate,
+            int registrationOrder,
+            CancellationToken cancellationToken);
     }
 }
 

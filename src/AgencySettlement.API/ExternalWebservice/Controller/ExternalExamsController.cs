@@ -4,6 +4,7 @@ using AgencySettlement.Application.ExternalExams.Commands.ImportExternalExams;
 using AgencySettlement.Application.ExternalExamsFeatures.Commands.CreateSettlementPaymentCommand;
 using AgencySettlement.Application.ExternalExamsFeatures.Queris.GetExternalSettlementStatusQuery;
 using AgencySettlement.Application.ExternalExamsFeatures.Queris.GetSettlementDatesQuery;
+using AgencySettlement.Application.ExternalExamsFeatures.Queris.GetSettlementOrderReportQuery;
 using AgencySettlement.Application.Settlements.Queries.DebtQuery;
 using AgencySettlement.Application.Settlements.Queries.PaymentQuery;
 using MediatR;
@@ -115,13 +116,57 @@ public sealed class ExternalExamsController : ControllerBase
 
 
     [HttpPost("add-payment")]
-    public async Task<IActionResult> Create(
+    public async Task<IActionResult> AddPayment(
        [FromBody] CreateSettlementPaymentCommand command,
        CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(
             command,
             cancellationToken);
+
+        return Ok(result);
+    }
+
+
+    [HttpGet("settlement-order-1")]
+    public async Task<IActionResult> GetSettlementOrder1(
+    [FromQuery] int agencyId,
+    [FromQuery] int yearId,
+    [FromQuery] string persianExecutionDate,
+    CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(
+            new GetSettlementOrderReportQuery(
+                agencyId,
+                yearId,
+                persianExecutionDate,
+                1),
+            cancellationToken);
+
+        if (result == null)
+            return NotFound();
+
+        return Ok(result);
+    }
+
+
+    [HttpGet("settlement-order-2")]
+    public async Task<IActionResult> GetSettlementOrder2(
+    [FromQuery] int agencyId,
+    [FromQuery] int yearId,
+    [FromQuery] string persianExecutionDate,
+    CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(
+            new GetSettlementOrderReportQuery(
+                agencyId,
+                yearId,
+                persianExecutionDate,
+                2),
+            cancellationToken);
+
+        if (result == null)
+            return NotFound();
 
         return Ok(result);
     }

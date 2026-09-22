@@ -16,7 +16,6 @@ namespace AgencySettlement.Application.ExternalExamsFeatures.Commands.CreateSett
          string PersianExecutionDate,
          decimal Amount,
          string PaymentDate,
-         string TrackingNumber,
-         string PaymentReference
+         string TrackingNumber
      );
 }

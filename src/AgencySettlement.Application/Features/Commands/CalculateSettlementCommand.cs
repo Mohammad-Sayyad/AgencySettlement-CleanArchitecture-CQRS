@@ -11,4 +11,7 @@ namespace AgencySettlement.Application.Settlements.Commands
     public sealed record CalculateSettlementCommand(
     CalculateSettlementRequest Request)
     : IRequest<SettlementResultDto>;
+
+
+
 }

@@ -27,9 +27,6 @@ namespace AgencySettlement.Domain.Entities
         public string TrackingNumber { get; set; }
             = string.Empty;
 
-        public string PaymentReference { get; set; }
-            = string.Empty;
-
         public Agency Agency { get; set; } = null!;
 
         public Settlement Settlement { get; set; } = null!;

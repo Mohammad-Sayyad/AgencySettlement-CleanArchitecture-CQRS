@@ -7,9 +7,13 @@ using System.Threading.Tasks;
 
 namespace AgencySettlement.Application.ExternalExamsFeatures.Commands.CreateSettlementPaymentCommand
 {
-    public record CreateSettlementPaymentCommand(
-      int AgencyId,
-      int YearId,
-      string PersianExecutionDate
-  ) : IRequest<CreateSettlementPaymentResponse>;
+    public sealed record CreateSettlementPaymentCommand(
+    long SettlementId,
+    int AgencyId,
+    int YearId,
+    string PersianExecutionDate,
+    decimal Amount,
+    string PaymentDate,
+    string TrackingNumber
+) : IRequest<CreateSettlementPaymentResponse>;
 }

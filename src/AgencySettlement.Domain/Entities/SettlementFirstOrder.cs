@@ -6,8 +6,7 @@ using System.Threading.Tasks;
 
 namespace AgencySettlement.Domain.Entities
 {
-
-    public class Settlement
+    public class SettlementFirstOrder
     {
         public long Id { get; set; }
 
@@ -15,23 +14,25 @@ namespace AgencySettlement.Domain.Entities
 
         public int YearId { get; set; }
 
+        public string PersianExecutionDate { get; set; } = string.Empty;
+
         public decimal TotalDebit { get; set; }
 
         public decimal TotalCredit { get; set; }
 
-
         public decimal Balance { get; set; }
+
+        public decimal TotalDebitGaj { get; set; }
+
+        public decimal TotalCreditGaj { get; set; }
+
+        public decimal BalanceGaj { get; set; }
+
+        public decimal ContractFloorAmount { get; set; }
 
         public DateTime CreatedAt { get; set; }
 
-        public List<SettlementItem> Items { get; set; } = [];
-        public decimal TotalDebitGaj { get; set; }
-        public decimal TotalCreditGaj { get; set; }
-        public string PersianExecutionDate { get; set; } = string.Empty;
-        public decimal BalanceGaj { get; set; }
-        public decimal ContractFloorAmount { get; set; }
-
-        public List<SettlementPayment> Payments { get; set; } = [];
-
+        public ICollection<SettlementFirstOrderItem> Items { get; set; }
+            = new List<SettlementFirstOrderItem>();
     }
 }

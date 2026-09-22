@@ -22,10 +22,8 @@ namespace AgencySettlement.Application.ExternalExamsFeatures.Commands.CreateSett
             CancellationToken cancellationToken)
         {
             var settlement =
-                await _repository.GetSettlementByAgencyAndDateAsync(
-                    request.AgencyId,
-                    request.YearId,
-                    request.PersianExecutionDate,
+                await _repository.GetSettlementByIdAsync(
+                    request.SettlementId,
                     cancellationToken);
 
             if (settlement is null)
@@ -35,31 +33,34 @@ namespace AgencySettlement.Application.ExternalExamsFeatures.Commands.CreateSett
             var payment = new SettlementPayment
             {
                 SettlementId = settlement.Id,
-                AgencyId = settlement.AgencyId,
-                YearId = settlement.YearId,
-                PersianExecutionDate = settlement.PersianExecutionDate
+                AgencyId = request.AgencyId,
+                YearId = request.YearId,
+                PersianExecutionDate = request.PersianExecutionDate,
+                Amount = request.Amount,
+                PaymentDate = request.PaymentDate,
+                TrackingNumber = request.TrackingNumber,
             };
 
             await _repository.AddSettlementPaymentAsync(
                 payment,
                 cancellationToken);
 
-            var message = payment.Amount > 0 ? "پرداخت با موفقیت دریافت و ثبت شد."
-    : "اطلاعات پرداخت دریافت شد، اما مبلغ پرداختی دریافت نشده است.";
+            var message = payment.Amount > 0
+                ? "پرداخت با موفقیت دریافت و ثبت شد."
+                : "اطلاعات پرداخت دریافت شد، اما مبلغ پرداختی دریافت نشده است.";
 
             return new CreateSettlementPaymentResponse(
-     true,
-     message,
-     payment.Id,
-     payment.SettlementId,
-     payment.AgencyId,
-     payment.YearId,
-     payment.PersianExecutionDate,
-     payment.Amount,
-     payment.PaymentDate,
-     payment.TrackingNumber,
-     payment.PaymentReference
- );
+                true,
+                message,
+                payment.Id,
+                payment.SettlementId,
+                payment.AgencyId,
+                payment.YearId,
+                payment.PersianExecutionDate,
+                payment.Amount,
+                payment.PaymentDate,
+                payment.TrackingNumber
+            );
         }
     }
 }
