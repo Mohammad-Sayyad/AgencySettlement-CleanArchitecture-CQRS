@@ -883,7 +883,7 @@ public async Task<SettlementDetailsDto> GetSettlementDetailsAsync(
 
                     AgencyName = agency.Name,
                     YearName = yearType.Name,
-
+                    DetailCode = agency.DetailCode,
                     EducationalLevelId = item.EducationalLevelId,
                     EducationalLevelName = educationalLevel.Name,
 
