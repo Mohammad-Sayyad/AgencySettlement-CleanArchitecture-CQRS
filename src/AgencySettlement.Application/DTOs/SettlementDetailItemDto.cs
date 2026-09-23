@@ -25,7 +25,11 @@ namespace AgencySettlement.Application.DTOs
         public int RegistrationPlanId { get; set; }
         public int StageTypeId { get; set; }
         public string StageTypeName { get; set; } = string.Empty;
+        public int DetailCode { get; set; }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public int EducationalLevelId { get; set; }
         public string EducationalLevelName { get; set; } = string.Empty;
 
