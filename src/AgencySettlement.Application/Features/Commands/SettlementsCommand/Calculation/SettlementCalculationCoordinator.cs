@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace AgencySettlement.Application.Features.Commands.SettlementsCommand.Calculation
 {
-    public sealed class SettlementCalculationCoordinator
+    public sealed class SettlementCalculationCoordinator : ISettlementCalculationCoordinator
     {
         private readonly SettlementCalculationDataLoader _dataLoader;
         private readonly SettlementCalculationPersistence _persistence;

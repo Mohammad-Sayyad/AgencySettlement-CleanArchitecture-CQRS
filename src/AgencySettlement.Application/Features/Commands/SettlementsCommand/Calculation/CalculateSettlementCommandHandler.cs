@@ -11,11 +11,11 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsCommand.Calc
     public sealed class CalculateSettlementCommandHandler
       : IRequestHandler<CalculateSettlementCommand, SettlementResultDto>
     {
-        private readonly SettlementCalculationCoordinator _coordinator;
+        private readonly ISettlementCalculationCoordinator _coordinator;
         private readonly IUnitOfWork _unitOfWork;
 
         public CalculateSettlementCommandHandler(
-            SettlementCalculationCoordinator coordinator,
+            ISettlementCalculationCoordinator coordinator,
             IUnitOfWork unitOfWork)
         {
             _coordinator = coordinator;
