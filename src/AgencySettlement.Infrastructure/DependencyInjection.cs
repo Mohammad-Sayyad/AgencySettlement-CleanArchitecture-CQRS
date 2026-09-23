@@ -1,5 +1,6 @@
 using AgencySettlement.Application.Abstractions.External;
 using AgencySettlement.Application.Abstractions.Persistence.ComboBoxRepository;
+using AgencySettlement.Application.Abstractions.Persistence.Common;
 using AgencySettlement.Application.Abstractions.Persistence.Repositories;
 using AgencySettlement.Application.Abstractions.Persistence.UserRepository;
 using AgencySettlement.Application.ExternalExams.Commands.ImportExternalExams;
@@ -7,6 +8,7 @@ using AgencySettlement.Domain.Entities;
 using AgencySettlement.Infrastructure.External;
 using AgencySettlement.Infrastructure.Persistence;
 using AgencySettlement.Infrastructure.Persistence.Authentication;
+using AgencySettlement.Infrastructure.Persistence.Common;
 using AgencySettlement.Infrastructure.Persistence.Repositories;
 using AgencySettlement.Infrastructure.Persistence.Repositories.UserRepositories;
 using Microsoft.AspNetCore.Identity;
@@ -83,6 +85,8 @@ public static class DependencyInjection
         services.AddScoped<
     IExternalSettlementStatusRepository,
     ExternalSettlementStatusRepository>();
+
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         services.Configure<ExternalExamApiOptions>(
             configuration.GetSection("ExternalExamApi"));

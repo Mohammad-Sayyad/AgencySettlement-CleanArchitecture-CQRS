@@ -1,5 +1,8 @@
 using AgencySettlement.Application.DTOs;
-using AgencySettlement.Application.Settlements.Commands;
+using AgencySettlement.Application.Features.Commands.SettlementsCommand.Calculation;
+
+using AgencySettlement.Application.Features.Commands.SettlementsCommand.Calculation;
+
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

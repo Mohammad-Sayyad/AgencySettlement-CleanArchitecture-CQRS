@@ -6,12 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AgencySettlement.Application.Settlements.Commands
+namespace AgencySettlement.Application.Features.Commands.SettlementsCommand.Calculation
 {
     public sealed record CalculateSettlementCommand(
     CalculateSettlementRequest Request)
     : IRequest<SettlementResultDto>;
-
-
-
 }
