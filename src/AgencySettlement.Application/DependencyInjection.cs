@@ -22,6 +22,9 @@ public static class DependencyInjection
         services.AddScoped<ISettlementCalculationRule, SchoolScholarshipSettlementRule>();
         services.AddScoped<ISettlementCalculationRule, FreeVolunteerSettlementRule>();
         services.AddScoped<ISettlementCalculationRule, SiteSettlementRule>();
+        services.AddScoped<
+    ISettlementCalculationCoordinator,
+    SettlementCalculationCoordinator>();
         return services;
     }
 }
