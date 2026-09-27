@@ -35,17 +35,56 @@ namespace AgencySettlement.Infrastructure.External
                     cancellationToken);
         }
 
-        public async Task AddSettlementPaymentAsync(
-            SettlementPayment payment,
-            CancellationToken cancellationToken)
+        //public async Task AddSettlementPaymentAsync(
+        //    SettlementPayment payment,
+        //    CancellationToken cancellationToken)
+
+        //{
+
+
+
+
+        //    await _context.SettlementPayments.AddAsync(
+        //        payment,
+        //        cancellationToken);
+
+        //    await _context.SaveChangesAsync(
+        //        cancellationToken);
+        //}
+
+  
+public async Task AddSettlementPaymentAsync(
+    SettlementPayment payment,
+    CancellationToken cancellationToken)
         {
+            var settlement = await _context.Settlements
+                .FirstOrDefaultAsync(
+                    x => x.Id == payment.SettlementId,
+                    cancellationToken);
+
+            if (settlement is null)
+                throw new InvalidOperationException(
+                    $"Settlement با شناسه {payment.SettlementId} پیدا نشد.");
+
+            if (payment.IsAppliedToSettlement)
+                return;
+
             await _context.SettlementPayments.AddAsync(
                 payment,
                 cancellationToken);
 
-            await _context.SaveChangesAsync(
-                cancellationToken);
+            settlement.TotalCredit += payment.Amount;
+
+            settlement.Balance =
+                settlement.TotalDebit -
+                settlement.TotalCredit;
+
+            payment.IsAppliedToSettlement = true;
+
+            await _context.SaveChangesAsync(cancellationToken);
         }
+
+
 
         public async Task<Settlement?> GetSettlementByIdAsync(
             long settlementId,

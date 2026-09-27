@@ -296,36 +296,36 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
             /*
              * فقط Paymentهایی که هنوز روی Settlement اعمال نشده‌اند
              */
-            var unappliedPayments = await _context.SettlementPayments
-                .Where(x =>
-                    settlementIds.Contains(x.SettlementId) &&
-                    !x.IsAppliedToSettlement)
-                .ToListAsync(cancellationToken);
+            //var unappliedPayments = await _context.SettlementPayments
+            //    .Where(x =>
+            //        settlementIds.Contains(x.SettlementId) &&
+            //        !x.IsAppliedToSettlement)
+            //    .ToListAsync(cancellationToken);
 
-            /*
-             * اعمال Payment روی Settlement
-             */
-            foreach (var payment in unappliedPayments)
-            {
-                var settlement = settlements
-                    .First(x => x.Id == payment.SettlementId);
+            ///*
+            // * اعمال Payment روی Settlement
+            // */
+            //foreach (var payment in unappliedPayments)
+            //{
+            //    var settlement = settlements
+            //        .First(x => x.Id == payment.SettlementId);
 
-                settlement.TotalCredit += payment.Amount;
+            //    settlement.TotalCredit += payment.Amount;
 
-                settlement.Balance =
-                    settlement.TotalDebit -
-                    settlement.TotalCredit;
+            //    settlement.Balance =
+            //        settlement.TotalDebit -
+            //        settlement.TotalCredit;
 
-                payment.IsAppliedToSettlement = true;
-            }
+            //    payment.IsAppliedToSettlement = true;
+            //}
 
-            /*
-             * ذخیره Settlement و Payment
-             */
-            if (unappliedPayments.Count > 0)
-            {
-                await _context.SaveChangesAsync(cancellationToken);
-            }
+            ///*
+            // * ذخیره Settlement و Payment
+            // */
+            //if (unappliedPayments.Count > 0)
+            //{
+            //    await _context.SaveChangesAsync(cancellationToken);
+            //}
 
             var agencyIds = settlements
                 .Select(x => x.AgencyId)
