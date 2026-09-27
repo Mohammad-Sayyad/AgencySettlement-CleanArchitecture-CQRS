@@ -45,6 +45,11 @@ namespace AgencySettlement.Application.ExternalExamsFeatures.Commands.CreateSett
                 payment,
                 cancellationToken);
 
+            /*
+        * فقط Paymentهایی که هنوز روی Settlement اعمال نشده‌اند
+        */
+         
+
             var message = payment.Amount > 0
                 ? "پرداخت با موفقیت دریافت و ثبت شد."
                 : "اطلاعات پرداخت دریافت شد، اما مبلغ پرداختی دریافت نشده است.";
