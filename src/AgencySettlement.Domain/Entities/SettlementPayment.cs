@@ -30,5 +30,8 @@ namespace AgencySettlement.Domain.Entities
         public Agency Agency { get; set; } = null!;
 
         public Settlement Settlement { get; set; } = null!;
+
+
+        public bool IsAppliedToSettlement { get; set; }
     }
 }
