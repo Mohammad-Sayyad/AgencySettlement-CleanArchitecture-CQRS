@@ -236,13 +236,13 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
 
 
         public async Task<SettlementReportResponse> GetReportAsync(
-    int? agencyId,
-    int yearId,
-    string fromDate,
-    string toDate,
-    int pageNumber,
-    int pageSize,
-    CancellationToken cancellationToken)
+     int? agencyId,
+     int yearId,
+     string fromDate,
+     string toDate,
+     int pageNumber,
+     int pageSize,
+     CancellationToken cancellationToken)
         {
             if (pageNumber < 1)
                 pageNumber = 1;
@@ -260,7 +260,6 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                 throw new ArgumentException("تاریخ پایان وارد نشده است.");
 
             var settlementsQuery = _context.Settlements
-                .AsNoTracking()
                 .Where(x =>
                     x.YearId == yearId &&
                     string.Compare(x.PersianExecutionDate, fromDate) >= 0 &&
@@ -272,18 +271,10 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                     .Where(x => x.AgencyId == agencyId.Value);
             }
 
-            var settlementData = await settlementsQuery
-                .Select(x => new
-                {
-                    SettlementId = x.Id,
-                    AgencyId = x.AgencyId,
-                    TotalDebit = x.TotalDebit,
-                    TotalCredit = x.TotalCredit,
-                    PersianExecutionDate = x.PersianExecutionDate
-                })
+            var settlements = await settlementsQuery
                 .ToListAsync(cancellationToken);
 
-            if (settlementData.Count == 0)
+            if (settlements.Count == 0)
             {
                 return new SettlementReportResponse
                 {
@@ -298,13 +289,46 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                 };
             }
 
-            var agencyIds = settlementData
-                .Select(x => x.AgencyId)
-                .Distinct()
+            var settlementIds = settlements
+                .Select(x => x.Id)
                 .ToList();
 
-            var settlementIds = settlementData
-                .Select(x => x.SettlementId)
+            /*
+             * فقط Paymentهایی که هنوز روی Settlement اعمال نشده‌اند
+             */
+            var unappliedPayments = await _context.SettlementPayments
+                .Where(x =>
+                    settlementIds.Contains(x.SettlementId) &&
+                    !x.IsAppliedToSettlement)
+                .ToListAsync(cancellationToken);
+
+            /*
+             * اعمال Payment روی Settlement
+             */
+            foreach (var payment in unappliedPayments)
+            {
+                var settlement = settlements
+                    .First(x => x.Id == payment.SettlementId);
+
+                settlement.TotalCredit += payment.Amount;
+
+                settlement.Balance =
+                    settlement.TotalDebit -
+                    settlement.TotalCredit;
+
+                payment.IsAppliedToSettlement = true;
+            }
+
+            /*
+             * ذخیره Settlement و Payment
+             */
+            if (unappliedPayments.Count > 0)
+            {
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+
+            var agencyIds = settlements
+                .Select(x => x.AgencyId)
                 .Distinct()
                 .ToList();
 
@@ -318,10 +342,6 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                     x.Name
                 })
                 .ToListAsync(cancellationToken);
-
-            var paymentDictionary = await GetSettlementPaymentAmountsAsync(
-                settlementIds,
-                cancellationToken);
 
             var bookletData = await _context.ExternalExamRecords
                 .AsNoTracking()
@@ -350,32 +370,26 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                     x => x.AgencyId,
                     x => x.BookletCount);
 
-            var calculatedItems = settlementData
+            var calculatedItems = settlements
                 .Select(settlement =>
                 {
-                    var agency = agencyDictionary.TryGetValue(
-                        settlement.AgencyId,
-                        out var agencyData)
-                        ? agencyData
-                        : null;
-
-                    var paymentCredit = paymentDictionary.TryGetValue(
-                        settlement.SettlementId,
-                        out var payment)
-                        ? payment
-                        : 0m;
-
-                    var totalCredit =
-                        settlement.TotalCredit + paymentCredit;
+                    var agency =
+                        agencyDictionary.TryGetValue(
+                            settlement.AgencyId,
+                            out var agencyData)
+                            ? agencyData
+                            : null;
 
                     var balance =
-                        settlement.TotalDebit - totalCredit;
+                        settlement.TotalDebit -
+                        settlement.TotalCredit;
 
-                    var bookletCount = bookletDictionary.TryGetValue(
-                        settlement.AgencyId,
-                        out var booklet)
-                        ? booklet
-                        : 0;
+                    var bookletCount =
+                        bookletDictionary.TryGetValue(
+                            settlement.AgencyId,
+                            out var booklet)
+                            ? booklet
+                            : 0;
 
                     var status =
                         balance > 0
@@ -387,7 +401,7 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                     return new SettlementReportData
                     {
                         SettlementId =
-                            settlement.SettlementId,
+                            settlement.Id,
 
                         AgencyId =
                             settlement.AgencyId,
@@ -411,7 +425,7 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                             settlement.TotalDebit,
 
                         CreditAmount =
-                            totalCredit,
+                            settlement.TotalCredit,
 
                         Balance =
                             balance,
@@ -990,21 +1004,23 @@ public async Task<SettlementDetailsDto> GetSettlementDetailsAsync(
                 .ToList();
 
             var settlementInfo = await _context.Settlements
-                .AsNoTracking()
-                .Where(x =>
-                    settlementIds.Contains(x.Id) &&
-                    x.AgencyId == agencyId &&
-                    x.YearId == yearId)
-                .Select(x => new
-                {
-                    x.Id,
-                    x.TotalDebit
-                })
-                .ToListAsync(cancellationToken);
+       .AsNoTracking()
+       .Where(x =>
+           x.AgencyId == agencyId &&
+           x.YearId == yearId &&
+           x.PersianExecutionDate == persianExecutionDate)
+       .Select(x => new
+       {
+           x.Id,
+           x.TotalDebit,
+           x.TotalCredit,
+           x.Balance,
+           x.PersianExecutionDate
+       })
+       .FirstOrDefaultAsync(cancellationToken);
 
-            var totalDebit = settlementInfo
-                .Select(x => x.TotalDebit)
-                .FirstOrDefault();
+            var totalDebit = settlementInfo?.TotalDebit ?? 0;
+            var balance = settlementInfo?.Balance ?? 0;
 
             // -----------------------------------------
             // Contract Floor
@@ -1030,7 +1046,6 @@ public async Task<SettlementDetailsDto> GetSettlementDetailsAsync(
                 TotalBaseAmount = items.Sum(x => x.BaseAmount),
 
                 ContractFloorAmount = contractFloorAmount,
-                TotalDebit = totalDebit,
 
                 // سهمیه حضوری فقط پلن 5
                 TotalInPersonFreeQuota = totalInPersonFreeQuota,
@@ -1231,7 +1246,12 @@ public async Task<SettlementDetailsDto> GetSettlementDetailsAsync(
                 // -----------------------------------------
 
                 TotalOnlineStudentAmount = onlineItems
-                    .Sum(x => x.StudentAmount)
+                    .Sum(x => x.StudentAmount),
+
+
+                    TotalDebit = totalDebit,
+
+                Balance = balance,
             };
         }
 

@@ -63,6 +63,7 @@ namespace AgencySettlement.Application.DTOs
         //
         public decimal ContractFloorAmount { get; set; }
         public decimal TotalDebit { get; set; }
+        public decimal Balance { get; set; }
     }
   
 }
