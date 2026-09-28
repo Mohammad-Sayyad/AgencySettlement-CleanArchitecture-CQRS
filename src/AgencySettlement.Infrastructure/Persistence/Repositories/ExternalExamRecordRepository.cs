@@ -65,5 +65,29 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                 histories,
                 cancellationToken);
         }
+
+        public async Task<List<ExternalExamRecord>> GetForMonthlyCalculationAsync(
+    int yearId,
+    int month,
+    CancellationToken cancellationToken)
+        {
+            if (month is < 1 or > 12)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(month),
+                    "ماه باید بین 1 تا 12 باشد.");
+            }
+
+            var monthText = month.ToString("00");
+
+            return await _db.ExternalExamRecords
+                .AsNoTracking()
+                .Where(x =>
+                    x.YearId == yearId &&
+                    EF.Functions.Like(
+                        x.PersianExecutionDate,
+                        $"__/{monthText}/__"))
+                .ToListAsync(cancellationToken);
+        }
     }
 }

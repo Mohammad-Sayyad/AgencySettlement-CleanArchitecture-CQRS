@@ -34,5 +34,23 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                 .OrderByDescending(x => x.PersianExecutionDate)
                 .FirstOrDefaultAsync(cancellationToken);
         }
+
+        public async Task<List<Percent>> GetForMonthlyCalculationAsync(
+    List<int> agencyIds,
+    CancellationToken cancellationToken)
+        {
+            if (agencyIds.Count == 0)
+            {
+                return [];
+            }
+
+            return await _db.Percents
+                .AsNoTracking()
+                .Where(x =>
+                    agencyIds.Contains(x.AgencyId) &&
+                    x.IsActive)
+                .OrderByDescending(x => x.PersianExecutionDate)
+                .ToListAsync(cancellationToken);
+        }
     }
 }

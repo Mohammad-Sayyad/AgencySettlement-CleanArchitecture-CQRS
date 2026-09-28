@@ -12,5 +12,10 @@ namespace AgencySettlement.Application.Abstractions.Persistence.Repositories
         Task AddAsync(
             SettlementHistory history,
             CancellationToken cancellationToken);
+        Task AddRangeAsync(
+  List<SettlementHistory> histories,
+  CancellationToken cancellationToken);
     }
-}
+
+  
+    }

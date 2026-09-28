@@ -39,5 +39,18 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                 .OrderByDescending(x => x.PersianExecutionDate)
                 .FirstOrDefaultAsync(cancellationToken);
         }
+
+        public async Task<List<Price>> GetForMonthlyCalculationAsync(
+    int yearId,
+    CancellationToken cancellationToken)
+        {
+            return await _db.Prices
+                .AsNoTracking()
+                .Where(x =>
+                    x.YearId == yearId &&
+                    x.IsActive)
+                .OrderByDescending(x => x.PersianExecutionDate)
+                .ToListAsync(cancellationToken);
+        }
     }
 }

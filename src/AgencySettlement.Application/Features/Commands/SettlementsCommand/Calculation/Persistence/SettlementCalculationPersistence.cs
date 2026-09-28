@@ -30,9 +30,9 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsCommand.Calc
         }
 
         public async Task<SettlementResultDto> PersistAsync(
-            SettlementCalculationContext context,
-            SettlementOrder calculatedOrder,
-            CancellationToken cancellationToken)
+           SettlementCalculationContext context,
+           SettlementOrder calculatedOrder,
+           CancellationToken cancellationToken)
         {
             if (context.ExistingOrder is null)
             {
@@ -41,34 +41,25 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsCommand.Calc
                     cancellationToken);
             }
 
-            UpdateSettlement(
-                context,
-                calculatedOrder);
-
-            var settlement =
-                context.Settlement;
+            var settlement = context.Settlement;
 
             if (settlement is null)
             {
-                settlement =
-                    new Settlement
-                    {
-                        AgencyId =
-                            context.Input.AgencyId,
+                settlement = CreateSettlement(
+                    context,
+                    calculatedOrder);
 
-                        YearId =
-                            context.Input.YearId,
-
-                        CreatedAt =
-                            DateTime.UtcNow
-                    };
-
-                context.Settlement =
-                    settlement;
+                context.Settlement = settlement;
 
                 await _settlementRepository.AddAsync(
                     settlement,
                     cancellationToken);
+            }
+            else
+            {
+                UpdateSettlement(
+                    context,
+                    calculatedOrder);
             }
 
             await _unitOfWork.SaveChangesAsync(
@@ -129,31 +120,103 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsCommand.Calc
                 calculatedOrder);
         }
 
-        private static void UpdateSettlement(
-            SettlementCalculationContext context,
-            SettlementOrder calculatedOrder)
+
+        private static Settlement CreateSettlement(
+    SettlementCalculationContext context,
+    SettlementOrder calculatedOrder)
         {
             var order1 =
-                context.Order1;
+                context.Input.RegistrationOrder == 1
+                    ? calculatedOrder
+                    : context.Order1;
 
             var order2 =
-                context.Order2;
+                context.Input.RegistrationOrder == 2
+                    ? calculatedOrder
+                    : context.Order2;
 
-            context.Settlement ??=
-                new Settlement
-                {
-                    AgencyId =
-                        context.Input.AgencyId,
+            var totalDebit =
+                (order1?.TotalDebit ?? 0m) +
+                (order2?.TotalDebit ?? 0m);
 
-                    YearId =
-                        context.Input.YearId,
+            var totalCredit =
+                (order1?.TotalCredit ?? 0m) +
+                (order2?.TotalCredit ?? 0m);
 
-                    CreatedAt =
-                        DateTime.UtcNow
-                };
+            var totalDebitGaj =
+                (order1?.TotalDebitGaj ?? 0m) +
+                (order2?.TotalDebitGaj ?? 0m);
 
-            var settlement =
-                context.Settlement;
+            var totalCreditGaj =
+                (order1?.TotalCreditGaj ?? 0m) +
+                (order2?.TotalCreditGaj ?? 0m);
+
+            var latestOrder =
+                context.Input.RegistrationOrder == 2
+                    ? order2
+                    : order1;
+
+            return new Settlement
+            {
+                AgencyId =
+                    context.Input.AgencyId,
+
+                YearId =
+                    context.Input.YearId,
+
+                TotalDebit =
+                    totalDebit,
+
+                TotalCredit =
+                    totalCredit,
+
+                Balance =
+                    totalDebit - totalCredit,
+
+                TotalDebitGaj =
+                    totalDebitGaj,
+
+                TotalCreditGaj =
+                    totalCreditGaj,
+
+                BalanceGaj =
+                    Math.Max(
+                        0m,
+                        totalCreditGaj - totalDebit),
+
+                ContractFloorAmount =
+                    latestOrder?.ContractFloorAmount ?? 0m,
+
+                PersianExecutionDate =
+                    latestOrder?.PersianExecutionDate,
+
+                CreatedAt =
+                    DateTime.UtcNow
+            };
+        }
+
+
+        private static void UpdateSettlement(
+       SettlementCalculationContext context,
+       SettlementOrder calculatedOrder)
+        {
+            var settlement = context.Settlement;
+
+            if (settlement is null)
+            {
+                throw new InvalidOperationException(
+                    "Settlement برای Agency و Year موردنظر پیدا نشد.");
+            }
+
+            var order1 =
+                context.Input.RegistrationOrder == 1
+                    ? calculatedOrder
+                    : context.Order1;
+
+            var order2 =
+                context.Input.RegistrationOrder == 2
+                    ? calculatedOrder
+                    : context.Order2;
 
             settlement.TotalDebit =
                 (order1?.TotalDebit ?? 0m) +
@@ -182,8 +245,9 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsCommand.Calc
                     settlement.TotalDebit);
 
             var latestOrder =
-                order2 ??
-                order1;
+                context.Input.RegistrationOrder == 2
+                    ? order2
+                    : order1;
 
             if (latestOrder is not null)
             {
@@ -194,6 +258,9 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsCommand.Calc
                     latestOrder.PersianExecutionDate;
             }
         }
+
+       
+
 
         private static SettlementResultDto CreateResult(
             Settlement settlement,

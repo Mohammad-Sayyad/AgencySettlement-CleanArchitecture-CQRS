@@ -327,6 +327,8 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
             //    await _context.SaveChangesAsync(cancellationToken);
             //}
 
+
+
             var agencyIds = settlements
                 .Select(x => x.AgencyId)
                 .Distinct()

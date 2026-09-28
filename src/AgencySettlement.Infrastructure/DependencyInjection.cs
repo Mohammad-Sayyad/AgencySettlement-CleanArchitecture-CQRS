@@ -4,6 +4,8 @@ using AgencySettlement.Application.Abstractions.Persistence.Common;
 using AgencySettlement.Application.Abstractions.Persistence.Repositories;
 using AgencySettlement.Application.Abstractions.Persistence.UserRepository;
 using AgencySettlement.Application.ExternalExams.Commands.ImportExternalExams;
+using AgencySettlement.Application.Features.Commands.SettlementsMonthlyInsertCommand;
+using AgencySettlement.Application.Features.Commands.SettlementsMonthlyInsertCommand.Persistence;
 using AgencySettlement.Domain.Entities;
 using AgencySettlement.Infrastructure.External;
 using AgencySettlement.Infrastructure.Persistence;
@@ -85,6 +87,9 @@ public static class DependencyInjection
         services.AddScoped<
     IExternalSettlementStatusRepository,
     ExternalSettlementStatusRepository>();
+
+        services.AddScoped<MonthlySettlementCoordinator>();
+        services.AddScoped<MonthlySettlementPersistence>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 

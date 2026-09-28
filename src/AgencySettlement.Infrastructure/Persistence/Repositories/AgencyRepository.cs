@@ -78,4 +78,18 @@ public sealed class AgencyRepository : IAgencyRepository
     {
         return _db.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task<List<Agency>> GetByIdsAsync(
+    List<int> agencyIds,
+    CancellationToken cancellationToken)
+    {
+        if (agencyIds.Count == 0)
+        {
+            return [];
+        }
+
+        return await _db.Agencies
+            .Where(x => agencyIds.Contains(x.Id))
+            .ToListAsync(cancellationToken);
+    }
 }

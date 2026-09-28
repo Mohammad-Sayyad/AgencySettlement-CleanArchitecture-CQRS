@@ -2,7 +2,7 @@ using AgencySettlement.Application.DTOs;
 using AgencySettlement.Application.Features.Commands.SettlementsCommand.Calculation;
 
 using AgencySettlement.Application.Features.Commands.SettlementsCommand.Calculation;
-
+using AgencySettlement.Application.Features.Commands.SettlementsMonthlyInsertCommand;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -31,5 +31,18 @@ namespace AgencySettlement.API.Settlment.Controllers;
 
             return Ok(result);
         }
+
+    [HttpPost("monthly-calculate")]
+    public async Task<IActionResult> CalculateMonthly(
+    [FromBody] CalculateMonthlySettlementsCommand request,
+    CancellationToken cancellationToken)
+    {
+        var result =
+            await _sender.Send(
+                request,
+                cancellationToken);
+
+        return Ok(result);
     }
+}
 

@@ -13,5 +13,9 @@ namespace AgencySettlement.Application.Abstractions.Persistence.Repositories
       int agencyId,
       int examModeId,
       CancellationToken cancellationToken);
+
+        Task<List<Percent>> GetForMonthlyCalculationAsync(
+    List<int> agencyIds,
+    CancellationToken cancellationToken);
     }
 }
