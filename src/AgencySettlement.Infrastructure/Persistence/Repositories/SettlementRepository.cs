@@ -85,6 +85,23 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                 cancellationToken);
         }
 
+        public async Task<List<Settlement>> GetForMonthlyCalculationAsync(
+    int yearId,
+    List<int> agencyIds,
+    CancellationToken cancellationToken)
+        {
+            if (agencyIds.Count == 0)
+            {
+                return [];
+            }
+
+            return await _context.Settlements
+                .Where(x =>
+                    x.YearId == yearId &&
+                    agencyIds.Contains(x.AgencyId))
+                .ToListAsync(cancellationToken);
+        }
+
         public Task SaveChangesAsync(
             CancellationToken cancellationToken)
         {

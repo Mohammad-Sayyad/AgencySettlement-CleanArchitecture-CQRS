@@ -16,5 +16,11 @@ namespace AgencySettlement.Application.Abstractions.Persistence.Repositories
      int registrationPlanId,
      int yearId,
      CancellationToken cancellationToken);
+
+        Task<List<Price>> GetForMonthlyCalculationAsync(
+    int yearId,
+    CancellationToken cancellationToken);
     }
+
+
 }

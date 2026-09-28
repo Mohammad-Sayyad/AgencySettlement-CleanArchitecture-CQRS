@@ -49,5 +49,23 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
         {
             return _context.SaveChangesAsync(cancellationToken);
         }
+
+        public async Task<List<SettlementOrder>> GetForMonthlyCalculationAsync(
+    int yearId,
+    List<int> agencyIds,
+    CancellationToken cancellationToken)
+        {
+            if (agencyIds.Count == 0)
+            {
+                return [];
+            }
+
+            return await _context.SettlementOrders
+                .Include(x => x.Items)
+                .Where(x =>
+                    x.YearId == yearId &&
+                    agencyIds.Contains(x.AgencyId))
+                .ToListAsync(cancellationToken);
+        }
     }
 }

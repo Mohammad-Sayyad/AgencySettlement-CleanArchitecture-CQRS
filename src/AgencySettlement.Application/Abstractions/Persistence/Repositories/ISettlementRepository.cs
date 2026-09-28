@@ -28,11 +28,18 @@ namespace AgencySettlement.Application.Abstractions.Persistence.Repositories
             int yearId,
             CancellationToken cancellationToken);
 
+        Task<List<Settlement>> GetForMonthlyCalculationAsync(
+    int yearId,
+    List<int> agencyIds,
+    CancellationToken cancellationToken);
+
         Task AddAsync(
             Settlement entity,
             CancellationToken cancellationToken);
 
         Task SaveChangesAsync(
             CancellationToken cancellationToken);
+
+
     }
 }

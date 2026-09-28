@@ -19,6 +19,20 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
             _db = db;
         }
 
+        public async Task AddRangeAsync(
+    List<SettlementHistory> histories,
+    CancellationToken cancellationToken)
+        {
+            if (histories.Count == 0)
+            {
+                return;
+            }
+
+            await _db.SettlementHistories.AddRangeAsync(
+                histories,
+                cancellationToken);
+        }
+
         public async Task AddAsync(
             SettlementHistory history,
             CancellationToken cancellationToken)

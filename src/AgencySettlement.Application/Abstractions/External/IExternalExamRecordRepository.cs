@@ -30,6 +30,11 @@ namespace AgencySettlement.Application.Abstractions.External
             string persianExecutionDate,
             int registrationOrder,
             CancellationToken cancellationToken);
+
+        Task<List<ExternalExamRecord>> GetForMonthlyCalculationAsync(
+    int yearId,
+    int month,
+    CancellationToken cancellationToken);
     }
 }
 

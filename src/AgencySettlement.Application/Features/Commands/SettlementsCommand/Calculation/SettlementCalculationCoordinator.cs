@@ -171,20 +171,30 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsCommand.Calc
                     order.TotalCreditGaj -
                     order.TotalDebit);
 
-            if (existingOrder is null)
-            {
-                context.Order1 =
-                    context.Input.RegistrationOrder == 1
-                        ? order
-                        : context.Order1;
+            //if (existingOrder is null)
+            //{
+            //    context.Order1 =
+            //        context.Input.RegistrationOrder == 1
+            //            ? order
+            //            : context.Order1;
 
-                context.Order2 =
-                    context.Input.RegistrationOrder == 2
-                        ? order
-                        : context.Order2;
+            //    context.Order2 =
+            //        context.Input.RegistrationOrder == 2
+            //            ? order
+            //            : context.Order2;
+            //}
+
+            if (context.Input.RegistrationOrder == 1)
+            {
+                context.Order1 = order;
+            }
+            else if (context.Input.RegistrationOrder == 2)
+            {
+                context.Order2 = order;
             }
 
             return order;
+
         }
 
         private static Domain.Entities.SettlementOrderItem
