@@ -88,6 +88,10 @@ public static class DependencyInjection
     IExternalSettlementStatusRepository,
     ExternalSettlementStatusRepository>();
 
+        services.AddScoped<
+    ISettlementFactorReportRepository,
+    SettlementFactorReportRepository>();
+
         services.AddScoped<MonthlySettlementCoordinator>();
         services.AddScoped<MonthlySettlementPersistence>();
 

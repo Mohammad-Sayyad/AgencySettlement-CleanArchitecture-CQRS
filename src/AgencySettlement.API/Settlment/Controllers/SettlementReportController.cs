@@ -1,4 +1,5 @@
 ﻿using AgencySettlement.Application.Features.Queries.GetSettlementDetailsQuery;
+using AgencySettlement.Application.Features.Queries.GetSettlementFactorReportQuery;
 using AgencySettlement.Application.Features.Queries.GetSettlementSelectionDetailsQuery;
 using AgencySettlement.Application.Settlements.Queries.ReportQuery;
 using MediatR;
@@ -90,6 +91,24 @@ namespace AgencySettlement.API.Settlment.Controllers
                 new GetSettlementSelectionDetailsQuery(
                     agencyId,
                     settlementIds),
+                cancellationToken);
+
+            return Ok(result);
+        }
+
+        [HttpGet("settlement/factor")]
+        public async Task<IActionResult> GetSettlementFactorReport(
+      [FromQuery] int yearId,
+      [FromQuery] string persianExecutionDate,
+      [FromQuery] int? agencyId,
+      [FromQuery] int examModeId,
+      CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(
+                new GetSettlementFactorReportQuery(
+                    yearId,
+                    persianExecutionDate,
+                    agencyId , examModeId),
                 cancellationToken);
 
             return Ok(result);
