@@ -26,6 +26,7 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+
         public async Task AddRangeAsync(
             List<ExternalExamRecord> records,
             CancellationToken cancellationToken)
@@ -68,25 +69,21 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
 
         public async Task<List<ExternalExamRecord>> GetForMonthlyCalculationAsync(
     int yearId,
-    int month,
+    string month,
     CancellationToken cancellationToken)
         {
-            if (month is < 1 or > 12)
+            if (string.IsNullOrWhiteSpace(month))
             {
-                throw new ArgumentOutOfRangeException(
-                    nameof(month),
-                    "ماه باید بین 1 تا 12 باشد.");
+                throw new ArgumentException(
+                    "تاریخ الزامی است.",
+                    nameof(month));
             }
-
-            var monthText = month.ToString("00");
 
             return await _db.ExternalExamRecords
                 .AsNoTracking()
                 .Where(x =>
                     x.YearId == yearId &&
-                    EF.Functions.Like(
-                        x.PersianExecutionDate,
-                        $"__/{monthText}/__"))
+                    x.PersianExecutionDate == month)
                 .ToListAsync(cancellationToken);
         }
     }

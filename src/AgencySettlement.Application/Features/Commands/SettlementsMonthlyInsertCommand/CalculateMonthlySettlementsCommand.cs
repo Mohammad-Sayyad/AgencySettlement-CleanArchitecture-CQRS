@@ -10,6 +10,6 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
 {
     public sealed record CalculateMonthlySettlementsCommand(
     int YearId,
-    int Month)
+    string Month)
     : IRequest<MonthlySettlementBatchResult>;
 }

@@ -10,7 +10,7 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
     {
         public int YearId { get; init; }
 
-        public int Month { get; init; }
+        public string Month { get; set; } = string.Empty;
 
         public int AgencyCount { get; init; }
 

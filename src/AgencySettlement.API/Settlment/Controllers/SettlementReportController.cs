@@ -9,6 +9,7 @@ namespace AgencySettlement.API.Settlment.Controllers
 {
     [ApiController]
     [Route("api/report")]
+    //[Authorize]
     public sealed class SettlementReportController : ControllerBase
     {
         private readonly IMediator _mediator;
