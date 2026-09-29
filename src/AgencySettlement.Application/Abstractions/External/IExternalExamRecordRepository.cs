@@ -32,9 +32,9 @@ namespace AgencySettlement.Application.Abstractions.External
             CancellationToken cancellationToken);
 
         Task<List<ExternalExamRecord>> GetForMonthlyCalculationAsync(
-    int yearId,
-    int month,
-    CancellationToken cancellationToken);
+     int yearId,
+     string month,
+     CancellationToken cancellationToken);
     }
 }
 

@@ -11,9 +11,9 @@ using System.Threading.Tasks;
 namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInsertCommand
 {
     public sealed class CalculateMonthlySettlementsCommandHandler
-    : IRequestHandler<
-        CalculateMonthlySettlementsCommand,
-        MonthlySettlementBatchResult>
+     : IRequestHandler<
+         CalculateMonthlySettlementsCommand,
+         MonthlySettlementBatchResult>
     {
         private readonly MonthlySettlementCoordinator _coordinator;
         private readonly MonthlySettlementPersistence _persistence;
@@ -33,28 +33,23 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
             CalculateMonthlySettlementsCommand request,
             CancellationToken cancellationToken)
         {
-            await _unitOfWork.BeginTransactionAsync(
-                cancellationToken);
+            await _unitOfWork.BeginTransactionAsync(cancellationToken);
 
             try
             {
-                var result =
-                    await _coordinator.CalculateAndPersistAsync(
-                        request.YearId,
-                        request.Month,
-                        _persistence,
-                        cancellationToken);
-
-                await _unitOfWork.CommitTransactionAsync(
+                var result = await _coordinator.CalculateAndPersistAsync(
+                    request.YearId,
+                    request.Month,
+                    _persistence,
                     cancellationToken);
+
+                await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
                 return result;
             }
             catch
             {
-                await _unitOfWork.RollbackTransactionAsync(
-                    cancellationToken);
-
+                await _unitOfWork.RollbackTransactionAsync(cancellationToken);
                 throw;
             }
         }

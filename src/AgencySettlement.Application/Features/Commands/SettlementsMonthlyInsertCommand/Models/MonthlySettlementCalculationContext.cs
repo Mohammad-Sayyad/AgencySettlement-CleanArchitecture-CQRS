@@ -11,7 +11,7 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
     {
         public required int YearId { get; init; }
 
-        public required int Month { get; init; }
+        public string Month { get; set; } = string.Empty;
 
         public required List<ExternalExamRecord> Records { get; init; }
 
@@ -23,7 +23,7 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
 
         public required Dictionary<OrderKey, SettlementOrder> ExistingOrders { get; init; }
 
-        public required Dictionary<int, Settlement> ExistingSettlements { get; init; }
+        public Dictionary<SettlementKey, Settlement> ExistingSettlements { get; init; } = new();
 
         public sealed record PriceKey(
             int PackageId,
@@ -36,9 +36,15 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
             int AgencyId,
             int ExamModeId);
 
-        public sealed record OrderKey(
-            int AgencyId,
-            int YearId,
-            int RegistrationOrder);
+        public readonly record struct OrderKey(
+     int AgencyId,
+     int YearId,
+     int RegistrationOrder,
+     string PersianExecutionDate);
+
+        public readonly record struct SettlementKey(
+    int AgencyId,
+    int YearId,
+    string PersianExecutionDate);
     }
 }

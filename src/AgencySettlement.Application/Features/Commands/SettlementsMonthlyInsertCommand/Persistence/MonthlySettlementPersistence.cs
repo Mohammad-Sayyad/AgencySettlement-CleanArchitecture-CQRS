@@ -2,11 +2,6 @@
 using AgencySettlement.Application.Abstractions.Persistence.Repositories;
 using AgencySettlement.Application.Features.Commands.SettlementsMonthlyInsertCommand.Models;
 using AgencySettlement.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInsertCommand.Persistence
 {
@@ -40,7 +35,8 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
                     new MonthlySettlementCalculationContext.OrderKey(
                         order.AgencyId,
                         order.YearId,
-                        order.RegistrationOrder);
+                        order.RegistrationOrder,
+                        order.PersianExecutionDate);
 
                 if (!context.ExistingOrders.ContainsKey(key))
                 {
@@ -57,12 +53,46 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
 
             foreach (var settlement in settlements)
             {
-                if (!context.ExistingSettlements.ContainsKey(
-                        settlement.AgencyId))
+                var key =
+                    new MonthlySettlementCalculationContext.SettlementKey(
+                        settlement.AgencyId,
+                        settlement.YearId,
+                        settlement.PersianExecutionDate);
+
+                if (!context.ExistingSettlements.ContainsKey(key))
                 {
                     await _settlementRepository.AddAsync(
                         settlement,
                         cancellationToken);
+                }
+                else
+                {
+                    var existingSettlement =
+                        context.ExistingSettlements[key];
+
+                    existingSettlement.TotalDebit =
+                        settlement.TotalDebit;
+
+                    existingSettlement.TotalCredit =
+                        settlement.TotalCredit;
+
+                    existingSettlement.Balance =
+                        settlement.Balance;
+
+                    existingSettlement.TotalDebitGaj =
+                        settlement.TotalDebitGaj;
+
+                    existingSettlement.TotalCreditGaj =
+                        settlement.TotalCreditGaj;
+
+                    existingSettlement.BalanceGaj =
+                        settlement.BalanceGaj;
+
+                    existingSettlement.ContractFloorAmount =
+                        settlement.ContractFloorAmount;
+
+                    existingSettlement.PersianExecutionDate =
+                        settlement.PersianExecutionDate;
                 }
             }
 
@@ -122,7 +152,6 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
 
             await _unitOfWork.SaveChangesAsync(
                 cancellationToken);
-
         }
 
         private static List<Settlement> BuildSettlements(
@@ -132,36 +161,56 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
             var result =
                 new List<Settlement>();
 
-            foreach (var agencyGroup in calculatedOrders.GroupBy(
-                         x => x.AgencyId))
+            foreach (var dateGroup in calculatedOrders.GroupBy(
+                         x => new
+                         {
+                             x.AgencyId,
+                             x.YearId,
+                             x.PersianExecutionDate
+                         }))
             {
+                var settlementKey =
+                    new MonthlySettlementCalculationContext.SettlementKey(
+                        dateGroup.Key.AgencyId,
+                        dateGroup.Key.YearId,
+                        dateGroup.Key.PersianExecutionDate);
+
                 context.ExistingSettlements.TryGetValue(
-                    agencyGroup.Key,
+                    settlementKey,
                     out var settlement);
 
                 settlement ??=
                     new Settlement
                     {
-                        AgencyId = agencyGroup.Key,
-                        YearId = context.YearId,
-                        CreatedAt = DateTime.UtcNow
+                        AgencyId =
+                            dateGroup.Key.AgencyId,
+
+                        YearId =
+                            dateGroup.Key.YearId,
+
+                        PersianExecutionDate =
+                            dateGroup.Key.PersianExecutionDate,
+
+                        CreatedAt =
+                            DateTime.UtcNow
                     };
 
                 var order1 =
-                    agencyGroup.FirstOrDefault(
+                    dateGroup.FirstOrDefault(
                         x => x.RegistrationOrder == 1);
 
                 var order2 =
-                    agencyGroup.FirstOrDefault(
+                    dateGroup.FirstOrDefault(
                         x => x.RegistrationOrder == 2);
 
                 if (order1 is null)
                 {
                     context.ExistingOrders.TryGetValue(
                         new MonthlySettlementCalculationContext.OrderKey(
-                            agencyGroup.Key,
-                            context.YearId,
-                            1),
+                            dateGroup.Key.AgencyId,
+                            dateGroup.Key.YearId,
+                            1,
+                            dateGroup.Key.PersianExecutionDate),
                         out order1);
                 }
 
@@ -169,9 +218,10 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
                 {
                     context.ExistingOrders.TryGetValue(
                         new MonthlySettlementCalculationContext.OrderKey(
-                            agencyGroup.Key,
-                            context.YearId,
-                            2),
+                            dateGroup.Key.AgencyId,
+                            dateGroup.Key.YearId,
+                            2,
+                            dateGroup.Key.PersianExecutionDate),
                         out order2);
                 }
 

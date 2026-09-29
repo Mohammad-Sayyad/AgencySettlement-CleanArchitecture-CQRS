@@ -5,11 +5,6 @@ using AgencySettlement.Application.Features.Commands.SettlementsCommand.Calculat
 using AgencySettlement.Application.Features.Commands.SettlementsMonthlyInsertCommand.Models;
 using AgencySettlement.Application.Features.Commands.SettlementsMonthlyInsertCommand.Persistence;
 using AgencySettlement.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInsertCommand
 {
@@ -43,11 +38,103 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
 
         public async Task<MonthlySettlementBatchResult> CalculateAsync(
             int yearId,
-            int month,
+            string month,
             CancellationToken cancellationToken)
         {
             Validate(yearId, month);
 
+            var context =
+                await BuildContextAsync(
+                    yearId,
+                    month,
+                    cancellationToken);
+
+            var calculatedOrders =
+                CalculateOrders(
+                    context,
+                    context.Records);
+
+            if (calculatedOrders.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    "هیچ SettlementOrder قابل محاسبه‌ای ایجاد نشد.");
+            }
+
+            var settlements =
+                BuildSettlements(
+                    context,
+                    calculatedOrders);
+
+            return CreateBatchResult(
+                context,
+                calculatedOrders,
+                settlements.Count);
+        }
+
+        public async Task<List<SettlementOrder>> CalculateOrdersAsync(
+            int yearId,
+            string month,
+            CancellationToken cancellationToken)
+        {
+            Validate(yearId, month);
+
+            var context =
+                await BuildContextAsync(
+                    yearId,
+                    month,
+                    cancellationToken);
+
+            return CalculateOrders(
+                context,
+                context.Records);
+        }
+
+        public async Task<MonthlySettlementBatchResult> CalculateAndPersistAsync(
+            int yearId,
+            string month,
+            MonthlySettlementPersistence persistence,
+            CancellationToken cancellationToken)
+        {
+            Validate(yearId, month);
+
+            var context =
+                await BuildContextAsync(
+                    yearId,
+                    month,
+                    cancellationToken);
+
+            var orders =
+                CalculateOrders(
+                    context,
+                    context.Records);
+
+            if (orders.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    "هیچ SettlementOrder قابل محاسبه‌ای ایجاد نشد.");
+            }
+
+            await persistence.PersistAsync(
+                context,
+                orders,
+                cancellationToken);
+
+            var settlements =
+                BuildSettlements(
+                    context,
+                    orders);
+
+            return CreateBatchResult(
+                context,
+                orders,
+                settlements.Count);
+        }
+
+        private async Task<MonthlySettlementCalculationContext> BuildContextAsync(
+            int yearId,
+            string month,
+            CancellationToken cancellationToken)
+        {
             var records =
                 await _externalRepository.GetForMonthlyCalculationAsync(
                     yearId,
@@ -57,7 +144,7 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
             if (records.Count == 0)
             {
                 throw new InvalidOperationException(
-                    $"هیچ رکوردی برای سال {yearId} و ماه {month} پیدا نشد.");
+                    $"هیچ رکوردی برای سال {yearId} و تاریخ {month} پیدا نشد.");
             }
 
             var agencyIds =
@@ -83,16 +170,10 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
                     yearId,
                     cancellationToken);
 
-            var priceDictionary =
-                BuildPriceDictionary(prices);
-
             var percents =
                 await _percentRepository.GetForMonthlyCalculationAsync(
                     agencyIds,
                     cancellationToken);
-
-            var percentDictionary =
-                BuildPercentDictionary(percents);
 
             var existingOrders =
                 await _orderRepository.GetForMonthlyCalculationAsync(
@@ -100,49 +181,61 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
                     agencyIds,
                     cancellationToken);
 
-            var existingOrderDictionary =
-                existingOrders.ToDictionary(
-                    x => new MonthlySettlementCalculationContext.OrderKey(
-                        x.AgencyId,
-                        x.YearId,
-                        x.RegistrationOrder));
-
-            ValidateOrders(
-                records,
-                existingOrderDictionary);
-
             var existingSettlements =
                 await _settlementRepository.GetForMonthlyCalculationAsync(
                     yearId,
                     agencyIds,
                     cancellationToken);
 
-            var settlementDictionary =
+            var existingOrderDictionary =
+     existingOrders.ToDictionary(
+         x => new MonthlySettlementCalculationContext.OrderKey(
+             x.AgencyId,
+             x.YearId,
+             x.RegistrationOrder,
+             x.PersianExecutionDate));
+
+            ValidateOrders(
+                records,
+                existingOrderDictionary);
+
+            var existingSettlementDictionary =
                 existingSettlements.ToDictionary(
-                    x => x.AgencyId);
+                    x => new MonthlySettlementCalculationContext.SettlementKey(
+                        x.AgencyId,
+                        x.YearId,
+                        x.PersianExecutionDate));
 
-            var context =
-                new MonthlySettlementCalculationContext
-                {
-                    YearId = yearId,
-                    Month = month,
-                    Records = records,
-                    Agencies = agencyDictionary,
-                    Prices = priceDictionary,
-                    Percents = percentDictionary,
-                    ExistingOrders = existingOrderDictionary,
-                    ExistingSettlements = settlementDictionary
-                };
+            return new MonthlySettlementCalculationContext
+            {
+                YearId = yearId,
+                Month = month,
+                Records = records,
+                Agencies = agencyDictionary,
+                Prices = BuildPriceDictionary(prices),
+                Percents = BuildPercentDictionary(percents),
+                ExistingOrders = existingOrderDictionary,
+                ExistingSettlements = existingSettlementDictionary
+            };
+        }
 
+        private List<SettlementOrder> CalculateOrders(
+            MonthlySettlementCalculationContext context,
+            List<ExternalExamRecord> records)
+        {
             var calculatedOrders =
                 new List<SettlementOrder>();
 
-            foreach (var agencyGroup in records.GroupBy(x => x.AgencyId))
+            foreach (var dateGroup in records.GroupBy(
+                         x => new
+                         {
+                             x.AgencyId,
+                             x.PersianExecutionDate
+                         }))
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
                 var agency =
-                    context.Agencies[agencyGroup.Key];
+                    context.Agencies[
+                        dateGroup.Key.AgencyId];
 
                 var quotaState =
                     new SettlementCalculationContext.Plan5QuotaState();
@@ -151,7 +244,7 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
                     agency.FreeQuotaCount,
                     agency.OneHundredThousandQuotaCount);
 
-                foreach (var orderGroup in agencyGroup.GroupBy(
+                foreach (var orderGroup in dateGroup.GroupBy(
                              x => x.RegistrationOrder))
                 {
                     var order =
@@ -166,148 +259,7 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
                 }
             }
 
-            if (calculatedOrders.Count == 0)
-            {
-                throw new InvalidOperationException(
-                    "هیچ SettlementOrder قابل محاسبه‌ای ایجاد نشد.");
-            }
-
-            var settlements =
-                BuildSettlements(
-                    context,
-                    calculatedOrders);
-
-            return new MonthlySettlementBatchResult
-            {
-                YearId = yearId,
-                Month = month,
-                AgencyCount = agencyIds.Count,
-                OrderCount = calculatedOrders.Count,
-                OrderItemCount =
-                    calculatedOrders.Sum(x => x.Items.Count),
-                SettlementCount = settlements.Count,
-                HistoryCount = settlements.Count,
-                TotalDebit =
-                    settlements.Sum(x => x.TotalDebit),
-                TotalCredit =
-                    settlements.Sum(x => x.TotalCredit),
-                TotalDebitGaj =
-                    settlements.Sum(x => x.TotalDebitGaj),
-                TotalCreditGaj =
-                    settlements.Sum(x => x.TotalCreditGaj)
-            };
-        }
-
-        public async Task<List<SettlementOrder>> CalculateOrdersAsync(
-            int yearId,
-            int month,
-            CancellationToken cancellationToken)
-        {
-            Validate(yearId, month);
-
-            var records =
-                await _externalRepository.GetForMonthlyCalculationAsync(
-                    yearId,
-                    month,
-                    cancellationToken);
-
-            if (records.Count == 0)
-            {
-                throw new InvalidOperationException(
-                    $"هیچ رکوردی برای سال {yearId} و ماه {month} پیدا نشد.");
-            }
-
-            var agencyIds =
-                records
-                    .Select(x => x.AgencyId)
-                    .Distinct()
-                    .ToList();
-
-            var agencies =
-                await _agencyRepository.GetByIdsAsync(
-                    agencyIds,
-                    cancellationToken);
-
-            var agencyDictionary =
-                agencies.ToDictionary(x => x.Id);
-
-            ValidateAgencies(
-                agencyIds,
-                agencyDictionary);
-
-            var prices =
-                await _priceRepository.GetForMonthlyCalculationAsync(
-                    yearId,
-                    cancellationToken);
-
-            var percents =
-                await _percentRepository.GetForMonthlyCalculationAsync(
-                    agencyIds,
-                    cancellationToken);
-
-            var existingOrders =
-                await _orderRepository.GetForMonthlyCalculationAsync(
-                    yearId,
-                    agencyIds,
-                    cancellationToken);
-
-            var existingSettlements =
-                await _settlementRepository.GetForMonthlyCalculationAsync(
-                    yearId,
-                    agencyIds,
-                    cancellationToken);
-
-            var context =
-                new MonthlySettlementCalculationContext
-                {
-                    YearId = yearId,
-                    Month = month,
-                    Records = records,
-                    Agencies = agencyDictionary,
-                    Prices = BuildPriceDictionary(prices),
-                    Percents = BuildPercentDictionary(percents),
-                    ExistingOrders =
-                        existingOrders.ToDictionary(
-                            x => new MonthlySettlementCalculationContext.OrderKey(
-                                x.AgencyId,
-                                x.YearId,
-                                x.RegistrationOrder)),
-                    ExistingSettlements =
-                        existingSettlements.ToDictionary(
-                            x => x.AgencyId)
-                };
-
-            var result =
-                new List<SettlementOrder>();
-
-            foreach (var agencyGroup in records.GroupBy(x => x.AgencyId))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var agency =
-                    context.Agencies[agencyGroup.Key];
-
-                var quotaState =
-                    new SettlementCalculationContext.Plan5QuotaState();
-
-                quotaState.Initialize(
-                    agency.FreeQuotaCount,
-                    agency.OneHundredThousandQuotaCount);
-
-                foreach (var orderGroup in agencyGroup.GroupBy(
-                             x => x.RegistrationOrder))
-                {
-                    result.Add(
-                        CalculateOrder(
-                            context,
-                            agency,
-                            orderGroup.ToList(),
-                            orderGroup.Key,
-                            quotaState));
-                }
-            }
-
-            return result;
+            return calculatedOrders;
         }
 
         private SettlementOrder CalculateOrder(
@@ -324,10 +276,12 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
             }
 
             var key =
-                new MonthlySettlementCalculationContext.OrderKey(
-                    agency.Id,
-                    context.YearId,
-                    registrationOrder);
+     new MonthlySettlementCalculationContext.OrderKey(
+         agency.Id,
+         context.YearId,
+         registrationOrder,
+         records[0].PersianExecutionDate);
+
 
             context.ExistingOrders.TryGetValue(
                 key,
@@ -355,10 +309,17 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
                 existingOrder ??
                 new SettlementOrder
                 {
-                    AgencyId = agency.Id,
-                    YearId = context.YearId,
-                    RegistrationOrder = registrationOrder,
-                    CreatedAt = DateTime.UtcNow
+                    AgencyId =
+                        agency.Id,
+
+                    YearId =
+                        context.YearId,
+
+                    RegistrationOrder =
+                        registrationOrder,
+
+                    CreatedAt =
+                        DateTime.UtcNow
                 };
 
             decimal totalDebit = 0m;
@@ -610,48 +571,47 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
             var result =
                 new List<Settlement>();
 
-            foreach (var agencyGroup in calculatedOrders.GroupBy(
-                         x => x.AgencyId))
+            foreach (var dateGroup in calculatedOrders.GroupBy(
+                         x => new
+                         {
+                             x.AgencyId,
+                             x.YearId,
+                             x.PersianExecutionDate
+                         }))
             {
+                var key =
+                    new MonthlySettlementCalculationContext.SettlementKey(
+                        dateGroup.Key.AgencyId,
+                        dateGroup.Key.YearId,
+                        dateGroup.Key.PersianExecutionDate);
+
                 context.ExistingSettlements.TryGetValue(
-                    agencyGroup.Key,
+                    key,
                     out var settlement);
 
                 settlement ??=
                     new Settlement
                     {
-                        AgencyId = agencyGroup.Key,
-                        YearId = context.YearId,
-                        CreatedAt = DateTime.UtcNow
+                        AgencyId =
+                            dateGroup.Key.AgencyId,
+
+                        YearId =
+                            dateGroup.Key.YearId,
+
+                        PersianExecutionDate =
+                            dateGroup.Key.PersianExecutionDate,
+
+                        CreatedAt =
+                            DateTime.UtcNow
                     };
 
                 var order1 =
-                    agencyGroup.FirstOrDefault(
+                    dateGroup.FirstOrDefault(
                         x => x.RegistrationOrder == 1);
 
                 var order2 =
-                    agencyGroup.FirstOrDefault(
+                    dateGroup.FirstOrDefault(
                         x => x.RegistrationOrder == 2);
-
-                if (order1 is null)
-                {
-                    context.ExistingOrders.TryGetValue(
-                        new MonthlySettlementCalculationContext.OrderKey(
-                            agencyGroup.Key,
-                            context.YearId,
-                            1),
-                        out order1);
-                }
-
-                if (order2 is null)
-                {
-                    context.ExistingOrders.TryGetValue(
-                        new MonthlySettlementCalculationContext.OrderKey(
-                            agencyGroup.Key,
-                            context.YearId,
-                            2),
-                        out order2);
-                }
 
                 settlement.TotalDebit =
                     (order1?.TotalDebit ?? 0m) +
@@ -679,18 +639,13 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
                         settlement.TotalCreditGaj -
                         settlement.TotalDebit);
 
-                var latestOrder =
-                    order2 ??
-                    order1;
+                settlement.ContractFloorAmount =
+                    dateGroup
+                        .Select(x => x.ContractFloorAmount)
+                        .FirstOrDefault();
 
-                if (latestOrder is not null)
-                {
-                    settlement.ContractFloorAmount =
-                        latestOrder.ContractFloorAmount;
-
-                    settlement.PersianExecutionDate =
-                        latestOrder.PersianExecutionDate;
-                }
+                settlement.PersianExecutionDate =
+                    dateGroup.Key.PersianExecutionDate;
 
                 if (!result.Contains(settlement))
                 {
@@ -699,6 +654,51 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
             }
 
             return result;
+        }
+
+        private static MonthlySettlementBatchResult CreateBatchResult(
+            MonthlySettlementCalculationContext context,
+            List<SettlementOrder> orders,
+            int settlementCount)
+        {
+            return new MonthlySettlementBatchResult
+            {
+                YearId =
+                    context.YearId,
+
+                Month =
+                    context.Month,
+
+                AgencyCount =
+                    context.Records
+                        .Select(x => x.AgencyId)
+                        .Distinct()
+                        .Count(),
+
+                OrderCount =
+                    orders.Count,
+
+                OrderItemCount =
+                    orders.Sum(x => x.Items.Count),
+
+                SettlementCount =
+                    settlementCount,
+
+                HistoryCount =
+                    settlementCount,
+
+                TotalDebit =
+                    orders.Sum(x => x.TotalDebit),
+
+                TotalCredit =
+                    orders.Sum(x => x.TotalCredit),
+
+                TotalDebitGaj =
+                    orders.Sum(x => x.TotalDebitGaj),
+
+                TotalCreditGaj =
+                    orders.Sum(x => x.TotalCreditGaj)
+            };
         }
 
         private static Dictionary<
@@ -783,7 +783,7 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
 
         private static void Validate(
             int yearId,
-            int month)
+            string month)
         {
             if (yearId <= 0)
             {
@@ -792,156 +792,12 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
                     nameof(yearId));
             }
 
-            if (month is < 1 or > 12)
+            if (string.IsNullOrWhiteSpace(month))
             {
                 throw new ArgumentException(
-                    "Month باید بین 1 تا 12 باشد.",
+                    "Month الزامی است.",
                     nameof(month));
             }
-        }
-
-        public async Task<MonthlySettlementBatchResult> CalculateAndPersistAsync(
-    int yearId,
-    int month,
-    MonthlySettlementPersistence persistence,
-    CancellationToken cancellationToken)
-        {
-            Validate(yearId, month);
-
-            var records =
-                await _externalRepository.GetForMonthlyCalculationAsync(
-                    yearId,
-                    month,
-                    cancellationToken);
-
-            if (records.Count == 0)
-            {
-                throw new InvalidOperationException(
-                    $"هیچ رکوردی برای سال {yearId} و ماه {month} پیدا نشد.");
-            }
-
-            var agencyIds =
-                records
-                    .Select(x => x.AgencyId)
-                    .Distinct()
-                    .ToList();
-
-            var agencies =
-                await _agencyRepository.GetByIdsAsync(
-                    agencyIds,
-                    cancellationToken);
-
-            var agencyDictionary =
-                agencies.ToDictionary(x => x.Id);
-
-            ValidateAgencies(
-                agencyIds,
-                agencyDictionary);
-
-            var prices =
-                await _priceRepository.GetForMonthlyCalculationAsync(
-                    yearId,
-                    cancellationToken);
-
-            var percents =
-                await _percentRepository.GetForMonthlyCalculationAsync(
-                    agencyIds,
-                    cancellationToken);
-
-            var existingOrders =
-                await _orderRepository.GetForMonthlyCalculationAsync(
-                    yearId,
-                    agencyIds,
-                    cancellationToken);
-
-            var existingSettlements =
-                await _settlementRepository.GetForMonthlyCalculationAsync(
-                    yearId,
-                    agencyIds,
-                    cancellationToken);
-
-            var context =
-                new MonthlySettlementCalculationContext
-                {
-                    YearId = yearId,
-                    Month = month,
-                    Records = records,
-                    Agencies = agencyDictionary,
-                    Prices = BuildPriceDictionary(prices),
-                    Percents = BuildPercentDictionary(percents),
-                    ExistingOrders =
-                        existingOrders.ToDictionary(
-                            x => new MonthlySettlementCalculationContext.OrderKey(
-                                x.AgencyId,
-                                x.YearId,
-                                x.RegistrationOrder)),
-                    ExistingSettlements =
-                        existingSettlements.ToDictionary(
-                            x => x.AgencyId)
-                };
-
-            var orders =
-                new List<SettlementOrder>();
-
-            foreach (var agencyGroup in records.GroupBy(x => x.AgencyId))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var agency =
-                    context.Agencies[agencyGroup.Key];
-
-                var quotaState =
-                    new SettlementCalculationContext.Plan5QuotaState();
-
-                quotaState.Initialize(
-                    agency.FreeQuotaCount,
-                    agency.OneHundredThousandQuotaCount);
-
-                foreach (var orderGroup in agencyGroup.GroupBy(
-                             x => x.RegistrationOrder))
-                {
-                    orders.Add(
-                        CalculateOrder(
-                            context,
-                            agency,
-                            orderGroup.ToList(),
-                            orderGroup.Key,
-                            quotaState));
-                }
-            }
-
-            await persistence.PersistAsync(
-                context,
-                orders,
-                cancellationToken);
-
-            var settlementCount =
-                orders
-                    .Select(x => x.AgencyId)
-                    .Distinct()
-                    .Count();
-
-            return new MonthlySettlementBatchResult
-            {
-                YearId = yearId,
-                Month = month,
-                AgencyCount = agencyIds.Count,
-                OrderCount = orders.Count,
-                OrderItemCount =
-                    orders.Sum(x => x.Items.Count),
-                SettlementCount =
-                    settlementCount,
-                HistoryCount =
-                    settlementCount,
-                TotalDebit =
-                    orders.Sum(x => x.TotalDebit),
-                TotalCredit =
-                    orders.Sum(x => x.TotalCredit),
-                TotalDebitGaj =
-                    orders.Sum(x => x.TotalDebitGaj),
-                TotalCreditGaj =
-                    orders.Sum(x => x.TotalCreditGaj)
-            };
         }
     }
 }
