@@ -14,17 +14,30 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddControllers();
 
 // CORS
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy("Frontend", policy =>
+//    {
+//        policy
+//            .AllowAnyOrigin()
+//            .AllowAnyHeader()
+//            .AllowAnyMethod();
+//    });
+//});
+
+// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
         policy
-            .AllowAnyOrigin()
+            .WithOrigins(
+                "http://localhost:4200"
+            )
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
 });
-
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
