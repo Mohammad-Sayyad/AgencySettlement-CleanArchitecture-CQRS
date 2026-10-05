@@ -12,7 +12,7 @@ namespace AgencySettlement.Application.Abstractions.Persistence.Repositories
         Task<IReadOnlyList<SettlementFactorReportDto>> GetAsync(
             int yearId,
             string persianExecutionDate,
-            int? agencyId, int? examModeId,
+            int? agencyId, int examModeId,
             CancellationToken cancellationToken);
     }
 }

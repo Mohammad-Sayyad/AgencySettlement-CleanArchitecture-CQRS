@@ -25,6 +25,21 @@ builder.Services.AddCors(options =>
     });
 });
 
+//CORS
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy("Frontend", policy =>
+//    {
+//        policy
+//            .WithOrigins(
+//                "http://localhost:4200"
+//            )
+//            .AllowAnyHeader()
+//            .AllowAnyMethod();
+//    });
+//});
+
+
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -57,6 +72,7 @@ builder.Services
                 ClockSkew = TimeSpan.FromMinutes(1)
             };
     });
+
 
 builder.Services.AddAuthorization();
 
