@@ -1,5 +1,4 @@
-﻿
-using AgencySettlement.Application.Abstractions.Persistence.Repositories;
+﻿using AgencySettlement.Application.Abstractions.Persistence.Repositories;
 using AgencySettlement.Application.DTOs;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -16,22 +15,23 @@ public sealed class SettlementFactorReportRepository : ISettlementFactorReportRe
         _configuration = configuration;
     }
 
-public async Task<IReadOnlyList<SettlementFactorReportDto>> GetAsync(
-    int yearId,
-    string persianExecutionDate,
-    int? agencyId,
-    int examModeId,
-    CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<SettlementFactorReportDto>> GetAsync(
+        int yearId,
+        string persianExecutionDate,
+        int? agencyId,
+        int examModeId,
+        CancellationToken cancellationToken)
     {
-        var connectionString = _configuration.GetConnectionString("AgencySettlementDb");
+        var connectionString =
+            _configuration.GetConnectionString("AgencySettlementDb");
 
         await using var connection = new SqlConnection(connectionString);
 
         var agencyFilter = agencyId.HasValue
-    ? "AND soi.AgencyId = @AgencyId"
-    : string.Empty;
+            ? "AND soi.AgencyId = @AgencyId"
+            : string.Empty;
 
-         var sql = $"""
+        var sql = $"""
         WITH ReportStructure AS
         (
             SELECT
@@ -183,6 +183,8 @@ public async Task<IReadOnlyList<SettlementFactorReportDto>> GetAsync(
                 a.DetailCode,
                 a.Name AS AgencyName,
 
+                ap.AgencyPercent,
+
                 rs.EducationalLevelId,
                 rs.LevelName,
 
@@ -199,6 +201,7 @@ public async Task<IReadOnlyList<SettlementFactorReportDto>> GetAsync(
                 ISNULL(rd.SiteReg, 0) AS SiteReg,
                 ISNULL(rd.SchoolBursary, 0) AS SchoolBursary,
                 ISNULL(rd.FreeBursary, 0) AS FreeBursary,
+
                 ISNULL(rd.Debit, 0) AS Debit,
                 ISNULL(rd.Credit, 0) AS Credit,
                 ISNULL(rd.Balance, 0) AS Balance,
@@ -222,6 +225,10 @@ public async Task<IReadOnlyList<SettlementFactorReportDto>> GetAsync(
             INNER JOIN Agencies a
                 ON a.Id = aid.AgencyId
 
+            INNER JOIN Percents ap
+                ON ap.AgencyId = a.Id
+               AND ap.ExamModeId = @ExamModeId
+
             LEFT JOIN RealData rd
                 ON rd.AgencyId = a.Id
                AND rd.PackageId = rs.PackageId
@@ -234,6 +241,7 @@ public async Task<IReadOnlyList<SettlementFactorReportDto>> GetAsync(
 
             DetailCode,
             AgencyName,
+            AgencyPercent,
 
             EducationalLevelId,
             LevelName AS EducationalLevelName,
@@ -291,9 +299,9 @@ public async Task<IReadOnlyList<SettlementFactorReportDto>> GetAsync(
             parameters,
             cancellationToken: cancellationToken);
 
-        var result = await connection.QueryAsync<SettlementFactorReportDto>(command);
+        var result =
+            await connection.QueryAsync<SettlementFactorReportDto>(command);
 
         return result.AsList();
     }
-
 }

@@ -30,5 +30,7 @@ namespace AgencySettlement.Application.DTOs
         public decimal DebitAmount { get; set; }
         public decimal CreditAmount { get; set; }
         public decimal Balance { get; set; }
+
+        public decimal AgencyPercent { get; set; }
     }
 }
