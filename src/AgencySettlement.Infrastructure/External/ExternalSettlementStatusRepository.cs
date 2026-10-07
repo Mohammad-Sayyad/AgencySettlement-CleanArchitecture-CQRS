@@ -1,4 +1,5 @@
 ﻿using AgencySettlement.Application.Abstractions.External;
+using AgencySettlement.Application.DTOs;
 using AgencySettlement.Application.DTOs.ExternalDtos;
 using AgencySettlement.Domain.Entities;
 using AgencySettlement.Domain.Enums;
@@ -19,10 +20,10 @@ public sealed class ExternalSettlementStatusRepository
     }
 
     public async Task<ExternalSettlementStatusDto?> GetExternalSettlementStatusAsync(
-        int agencyId,
-        int yearId,
-        string persianExecutionDate,
-        CancellationToken cancellationToken)
+    int agencyId,
+    int yearId,
+    string persianExecutionDate,
+    CancellationToken cancellationToken)
     {
         var settlement = await _context.Settlements
             .AsNoTracking()
@@ -33,7 +34,6 @@ public sealed class ExternalSettlementStatusRepository
             .OrderByDescending(x => x.Id)
             .Select(x => new
             {
-
                 x.Id,
                 x.AgencyId,
                 x.Balance,
@@ -43,20 +43,131 @@ public sealed class ExternalSettlementStatusRepository
             })
             .FirstOrDefaultAsync(cancellationToken);
 
-
         var databaseName = _context.Database.GetDbConnection().Database;
         var serverName = _context.Database.GetDbConnection().DataSource;
 
-        Console.WriteLine($"SERVER: [{serverName}]");
-        Console.WriteLine($"DATABASE: [{databaseName}]");
-        Console.WriteLine($"AgencyId: [{agencyId}]");
-        Console.WriteLine($"YearId: [{yearId}]");
-        Console.WriteLine($"PersianExecutionDate: [{persianExecutionDate}]");
-        Console.WriteLine($"DateLength: {persianExecutionDate?.Length}");
-
-
         if (settlement == null)
             return null;
+
+        // -----------------------------------------
+        // Items
+        // -----------------------------------------
+
+        var items = await (
+            from item in _context.SettlementOrderItems.AsNoTracking()
+
+            join order in _context.SettlementOrders.AsNoTracking()
+                on item.SettlementOrderId equals order.Id
+
+            join package in _context.Packages.AsNoTracking()
+                on item.PackageId equals package.Id
+
+            join educationalLevel in _context.EducationalLevels.AsNoTracking()
+                on item.EducationalLevelId equals educationalLevel.Id
+
+            join studyField in _context.StudyFields.AsNoTracking()
+                on item.StudyFieldId equals studyField.Id
+
+            join examMode in _context.ExamModes.AsNoTracking()
+                on item.ExamModeId equals examMode.Id
+
+            join agency in _context.Agencies.AsNoTracking()
+                on item.AgencyId equals agency.Id
+
+            join yearType in _context.YearTypes.AsNoTracking()
+                on item.YearId equals yearType.Id
+
+            join registrationPlan in _context.RegistrationPlans.AsNoTracking()
+                on item.RegistrationPlanId equals registrationPlan.Id
+
+            where item.AgencyId == agencyId
+                  && item.YearId == yearId
+                  && item.PersianExecutionDate == persianExecutionDate
+
+            orderby item.ExamModeId,
+                    item.EducationalLevelId,
+                    item.StudyFieldId
+
+            select new SettlementDetailItemDto
+            {
+                SettlementItemId = item.Id,
+
+                SettlementId = order.Id,
+
+                PackageId = item.PackageId,
+                PackageName = package.Name,
+
+                ExamModeId = item.ExamModeId,
+                ExamModeName = examMode.Name,
+
+                AgencyName = agency.Name,
+                YearName = yearType.Name,
+                DetailCode = agency.DetailCode,
+
+                EducationalLevelId = item.EducationalLevelId,
+                EducationalLevelName = educationalLevel.Name,
+
+                RegistrationPlanId = item.RegistrationPlanId,
+                RegistrationPlanName = registrationPlan.Name,
+
+                StudyFieldId = item.StudyFieldId,
+                StudyFieldName = studyField.Name,
+
+                CandidateCount = item.CandidateCount,
+                FreeCandidateCount = item.FreeCandidateCount,
+                PaidCandidateCount = item.PaidCandidateCount,
+
+                UnitPrice = item.UnitPrice,
+                BaseAmount = item.BaseAmount,
+
+                DiscountPercent = item.GajPercent,
+
+                DiscountAmount =
+                    item.BaseAmount *
+                    item.GajPercent /
+                    100m,
+
+                AgencyPercent = item.AgencyPercent,
+
+                AgencyAmount = item.AgencyAmount,
+                GajAmount = item.GajAmount,
+                StudentAmount = item.StudentAmount,
+
+                DebitAmount = item.DebitAmount,
+                CreditAmount = item.CreditAmount,
+
+                TotalAmount =
+                    item.BaseAmount -
+                    (
+                        item.BaseAmount *
+                        item.GajPercent /
+                        100m
+                    )
+            }
+        ).ToListAsync(cancellationToken);
+
+        foreach (var item in items)
+        {
+            item.StageTypeId =
+                GetStageTypeId(item.EducationalLevelId);
+
+            item.StageTypeName =
+                GetStageTypeName(item.EducationalLevelId);
+
+            item.Title =
+                $"{item.ExamModeName} - " +
+                $"{item.StageTypeName} - " +
+                $"پایه {item.EducationalLevelName} - " +
+                $"رشته {item.StudyFieldName}";
+        }
+
+        var totalInPersonCount = items
+            .Where(x => x.ExamModeId == 0)
+            .Sum(x => x.CandidateCount);
+
+        var totalOnlineCount = items
+            .Where(x => x.ExamModeId == 1)
+            .Sum(x => x.CandidateCount);
 
         var paymentStartDate = settlement.PersianExecutionDate;
 
@@ -73,14 +184,97 @@ public sealed class ExternalSettlementStatusRepository
             AgencyId = settlement.AgencyId,
             YearId = settlement.YearId,
             SettlmentId = settlement.Id,
+
             PersianExecutionDate = paymentStartDate,
             PaymentDeadline = paymentDeadlineDate,
             PaymentStatus = paymentStatus,
-           // DebtAmount = settlement.TotalDebit,
-            Balance = settlement.Balance
+
+            // DebtAmount = settlement.TotalDebit,
+            Balance = settlement.Balance,
+
+            Items = items,
+
+            TotalInPersonCount = totalInPersonCount,
+
+            TotalOnlineCount = totalOnlineCount
         };
     }
+
+    //public async Task<ExternalSettlementStatusDto?> GetExternalSettlementStatusAsync(
+    //    int agencyId,
+    //    int yearId,
+    //    string persianExecutionDate,
+    //    CancellationToken cancellationToken)
+    //{
+    //    var settlement = await _context.Settlements
+    //        .AsNoTracking()
+    //        .Where(x =>
+    //            x.AgencyId == agencyId &&
+    //            x.YearId == yearId &&
+    //            x.PersianExecutionDate == persianExecutionDate)
+    //        .OrderByDescending(x => x.Id)
+    //        .Select(x => new
+    //        {
+
+    //            x.Id,
+    //            x.AgencyId,
+    //            x.Balance,
+    //            x.YearId,
+    //            x.PersianExecutionDate,
+    //            x.TotalDebit
+    //        })
+    //        .FirstOrDefaultAsync(cancellationToken);
+
+
+    //    var databaseName = _context.Database.GetDbConnection().Database;
+    //    var serverName = _context.Database.GetDbConnection().DataSource;
+
+
+    //    if (settlement == null)
+    //        return null;
+
+    //    var paymentStartDate = settlement.PersianExecutionDate;
+
+    //    var paymentDeadlineDate = AddDays(
+    //        paymentStartDate,
+    //        4);
+
+    //    var paymentStatus = CalculateStatus(
+    //        paymentStartDate,
+    //        paymentDeadlineDate);
+
+    //    return new ExternalSettlementStatusDto
+    //    {
+    //        AgencyId = settlement.AgencyId,
+    //        YearId = settlement.YearId,
+    //        SettlmentId = settlement.Id,
+    //        PersianExecutionDate = paymentStartDate,
+    //        PaymentDeadline = paymentDeadlineDate,
+    //        PaymentStatus = paymentStatus,
+    //       // DebtAmount = settlement.TotalDebit,
+    //        Balance = settlement.Balance
+    //    };
+    //}
     //
+
+    private static int GetStageTypeId(int educationalLevelId)
+       => educationalLevelId switch
+       {
+           >= 1 and <= 6 => 1,
+           >= 7 and <= 9 => 2,
+           >= 10 and <= 12 => 3,
+           _ => 0
+       };
+
+    private static string GetStageTypeName(int educationalLevelId)
+        => educationalLevelId switch
+        {
+            >= 1 and <= 6 => "ابتدایی توصیفی",
+            >= 7 and <= 9 => "متوسطه اول",
+            >= 10 and <= 12 => "متوسطه دوم",
+            _ => string.Empty
+        };
+
     private static SettlementPaymentStatus CalculateStatus(
         string paymentStartDate,
         string paymentDeadlineDate)
