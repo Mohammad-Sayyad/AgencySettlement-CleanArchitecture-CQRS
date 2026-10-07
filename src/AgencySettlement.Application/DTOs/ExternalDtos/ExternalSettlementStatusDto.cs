@@ -26,5 +26,11 @@ namespace AgencySettlement.Application.DTOs.ExternalDtos
         //public decimal DebtAmount { get; set; }
         public decimal Balance { get; set; }
         public SettlementPaymentStatus PaymentStatus { get; set; }
+
+        public List<SettlementDetailItemDto> Items { get; set; } = [];
+
+        public int TotalInPersonCount { get; set; }
+
+        public int TotalOnlineCount { get; set; }
     }
 }
