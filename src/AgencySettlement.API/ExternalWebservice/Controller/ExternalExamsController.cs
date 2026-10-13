@@ -1,7 +1,9 @@
 ﻿using AgencySettlement.Application.DTOs;
+using AgencySettlement.Application.DTOs.SingleLessonDto;
 using AgencySettlement.Application.ExternalExams.Commands;
 using AgencySettlement.Application.ExternalExams.Commands.ImportExternalExams;
 using AgencySettlement.Application.ExternalExamsFeatures.Commands.CreateSettlementPaymentCommand;
+using AgencySettlement.Application.ExternalExamsFeatures.Commands.ImportSingleLessons;
 using AgencySettlement.Application.ExternalExamsFeatures.Queris.GetExternalSettlementStatusQuery;
 using AgencySettlement.Application.ExternalExamsFeatures.Queris.GetSettlementDatesQuery;
 using AgencySettlement.Application.ExternalExamsFeatures.Queris.GetSettlementOrderReportQuery;
@@ -169,6 +171,27 @@ public sealed class ExternalExamsController : ControllerBase
             return NotFound();
 
         return Ok(result);
+    }
+
+    [HttpPost("single-lessons/import")]
+    public async Task<IActionResult> ImportSingleLessons(
+    [FromBody] ImportSingleLessonRequest request,
+    CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(
+            new ImportSingleLessonsCommand(request),
+            cancellationToken);
+
+        return Ok(new
+        {
+            message = result.DuplicateRecords > 0
+                ? $"اطلاعات تک‌درس دریافت شد. {result.DuplicateRecords} رکورد تکراری بود."
+                : "اطلاعات تک‌درس با موفقیت دریافت شد.",
+
+            totalReceived = result.TotalReceived,
+            newRecords = result.NewRecords,
+            duplicateRecords = result.DuplicateRecords
+        });
     }
 
 }
