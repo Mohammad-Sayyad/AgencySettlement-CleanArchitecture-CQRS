@@ -282,7 +282,7 @@ FakesAssemblies/
 *.GhostDoc.xml
 
 # Node.js Tools for Visual Studio
-.ntvs_analysis.dat
+*.ntvs_analysis.dat
 node_modules/
 
 # Visual Studio 6 build log
@@ -361,3 +361,65 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# ============================================================
+# Sensitive / Environment-specific files (برای ریپوی پابلیک خیلی مهم)
+# ============================================================
+
+# appsettings که ممکنه connection string، JWT، API Key و ... داشته باشن
+**/appsettings.*.json
+!**/appsettings.json
+!**/appsettings.Development.json
+
+# اگر می‌خوای فقط Development رو نگه داری و بقیه رو کامل ignore کنی:
+# **/appsettings.Local.json
+# **/appsettings.Production.json
+# **/appsettings.Staging.json
+
+# User Secrets
+**/secrets.json
+**/secrets/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Certificates & keys
+*.pfx
+*.p12
+*.pem
+*.key
+*.crt
+*.cer
+*.jks
+*.keystore
+
+# Local database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Docker
+docker-compose.override.yml
