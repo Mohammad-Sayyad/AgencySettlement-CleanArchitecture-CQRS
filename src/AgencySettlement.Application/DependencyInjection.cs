@@ -1,3 +1,4 @@
+using AgencySettlement.Application.ExternalExamsFeatures.Commands.ImportSingleLessons;
 using AgencySettlement.Application.Features.Commands.SettlementsCommand.Calculation;
 using AgencySettlement.Application.Features.Commands.SettlementsCommand.Calculation.Data;
 using AgencySettlement.Application.Features.Commands.SettlementsCommand.Calculation.Persistence;
@@ -25,6 +26,8 @@ public static class DependencyInjection
         services.AddScoped<
     ISettlementCalculationCoordinator,
     SettlementCalculationCoordinator>();
+
+        services.AddTransient<ImportSingleLessonsCommandValidator>();
         return services;
     }
 }

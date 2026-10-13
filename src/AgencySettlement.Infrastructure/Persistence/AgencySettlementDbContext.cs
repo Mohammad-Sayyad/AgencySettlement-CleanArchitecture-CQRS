@@ -1,5 +1,6 @@
 using AgencySettlement.Domain;
 using AgencySettlement.Domain.Entities;
+using AgencySettlement.Domain.Entities.SingleLesson;
 using Microsoft.EntityFrameworkCore;
 
 namespace AgencySettlement.Infrastructure.Persistence;
@@ -44,6 +45,11 @@ public sealed class AgencySettlementDbContext(DbContextOptions<AgencySettlementD
     public DbSet<SettlementFirstOrderPayment> SettlementFirstOrderPayments
         => Set<SettlementFirstOrderPayment>();
 
+    public DbSet<SingleLessonExternalInput> SingleLessonExternalInputs
+    => Set<SingleLessonExternalInput>();
+
+    public DbSet<SingleLessonExternalInputHistory> SingleLessonExternalInputHistories
+        => Set<SingleLessonExternalInputHistory>();
 
     //protected override void OnModelCreating(ModelBuilder modelBuilder) =>
     //    modelBuilder.ApplyConfigurationsFromAssembly(typeof(AgencySettlementDbContext).Assembly);

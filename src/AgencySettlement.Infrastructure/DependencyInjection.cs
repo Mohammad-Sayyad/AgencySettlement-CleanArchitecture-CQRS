@@ -1,4 +1,5 @@
 using AgencySettlement.Application.Abstractions.External;
+using AgencySettlement.Application.Abstractions.External.SingleLesson;
 using AgencySettlement.Application.Abstractions.Persistence.ComboBoxRepository;
 using AgencySettlement.Application.Abstractions.Persistence.Common;
 using AgencySettlement.Application.Abstractions.Persistence.Repositories;
@@ -8,6 +9,7 @@ using AgencySettlement.Application.Features.Commands.SettlementsMonthlyInsertCom
 using AgencySettlement.Application.Features.Commands.SettlementsMonthlyInsertCommand.Persistence;
 using AgencySettlement.Domain.Entities;
 using AgencySettlement.Infrastructure.External;
+using AgencySettlement.Infrastructure.External.SingleLesson;
 using AgencySettlement.Infrastructure.Persistence;
 using AgencySettlement.Infrastructure.Persistence.Authentication;
 using AgencySettlement.Infrastructure.Persistence.Common;
@@ -94,6 +96,12 @@ public static class DependencyInjection
 
         services.AddScoped<MonthlySettlementCoordinator>();
         services.AddScoped<MonthlySettlementPersistence>();
+
+        services.AddScoped<
+    ISingleLessonExternalInputRepository,
+    SingleLessonExternalInputRepository>();
+
+       
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
