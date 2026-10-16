@@ -1,4 +1,5 @@
 using AgencySettlement.Application.ExternalExamsFeatures.Commands.ImportSingleLessons;
+using AgencySettlement.Application.ExternalExamsFeatures.Commands.ImportSingleLessons.Rules;
 using AgencySettlement.Application.Features.Commands.SettlementsCommand.Calculation;
 using AgencySettlement.Application.Features.Commands.SettlementsCommand.Calculation.Data;
 using AgencySettlement.Application.Features.Commands.SettlementsCommand.Calculation.Persistence;
@@ -26,6 +27,13 @@ public static class DependencyInjection
         services.AddScoped<
     ISettlementCalculationCoordinator,
     SettlementCalculationCoordinator>();
+
+        services.AddScoped<ISingleLessonSettlementCoordinator, SingleLessonSettlementCoordinator>();
+        services.AddSingleton<ISingleLessonPlanRuleFactory, SingleLessonPlanRuleFactory>();
+        services.AddSingleton<ISingleLessonPlanRule, RegularSingleLessonPlanRule>();
+        services.AddSingleton<ISingleLessonPlanRule, HekmatSingleLessonPlanRule>();
+        services.AddSingleton<ISingleLessonPlanRule, SiteSingleLessonPlanRule>();
+
 
         services.AddTransient<ImportSingleLessonsCommandValidator>();
         return services;
