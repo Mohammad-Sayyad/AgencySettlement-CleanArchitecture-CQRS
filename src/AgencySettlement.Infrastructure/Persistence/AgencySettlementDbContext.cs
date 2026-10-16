@@ -51,6 +51,12 @@ public sealed class AgencySettlementDbContext(DbContextOptions<AgencySettlementD
     public DbSet<SingleLessonExternalInputHistory> SingleLessonExternalInputHistories
         => Set<SingleLessonExternalInputHistory>();
 
+    public DbSet<SingleLessonPrice> SingleLessonPrices => Set<SingleLessonPrice>();
+    public DbSet<SingleLessonPercent> SingleLessonPercents => Set<SingleLessonPercent>();
+    public DbSet<SingleLessonSettlement> SingleLessonSettlements => Set<SingleLessonSettlement>();
+    public DbSet<SingleLessonSettlementItem> SingleLessonSettlementItems => Set<SingleLessonSettlementItem>();
+    public DbSet<SingleLessonSettlementHistory> SingleLessonSettlementHistories => Set<SingleLessonSettlementHistory>();
+
     //protected override void OnModelCreating(ModelBuilder modelBuilder) =>
     //    modelBuilder.ApplyConfigurationsFromAssembly(typeof(AgencySettlementDbContext).Assembly);
 

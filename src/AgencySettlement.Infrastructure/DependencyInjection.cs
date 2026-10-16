@@ -5,6 +5,8 @@ using AgencySettlement.Application.Abstractions.Persistence.Common;
 using AgencySettlement.Application.Abstractions.Persistence.Repositories;
 using AgencySettlement.Application.Abstractions.Persistence.UserRepository;
 using AgencySettlement.Application.ExternalExams.Commands.ImportExternalExams;
+using AgencySettlement.Application.ExternalExamsFeatures.Commands.ImportSingleLessons;
+using AgencySettlement.Application.ExternalExamsFeatures.Commands.ImportSingleLessons.Rules;
 using AgencySettlement.Application.Features.Commands.SettlementsMonthlyInsertCommand;
 using AgencySettlement.Application.Features.Commands.SettlementsMonthlyInsertCommand.Persistence;
 using AgencySettlement.Domain.Entities;
@@ -101,7 +103,7 @@ public static class DependencyInjection
     ISingleLessonExternalInputRepository,
     SingleLessonExternalInputRepository>();
 
-       
+        services.AddScoped<ISingleLessonSettlementStore, SingleLessonSettlementStore>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
