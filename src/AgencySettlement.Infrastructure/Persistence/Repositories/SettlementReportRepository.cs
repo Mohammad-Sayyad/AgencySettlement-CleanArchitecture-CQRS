@@ -1,6 +1,7 @@
 ﻿using AgencySettlement.Application.Abstractions.Persistence.Repositories;
 using AgencySettlement.Application.Common;
 using AgencySettlement.Application.DTOs;
+using AgencySettlement.Application.DTOs.SingleLessonDto;
 using AgencySettlement.Domain.Entities;
 using AgencySettlement.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -17,223 +18,7 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
             _context = context;
         }
 
-        //    public async Task<SettlementReportResponse> GetReportAsync(
-        //int? agencyId,
-        //int yearId,
-        //string persianExecutionDate,
-        //int pageNumber,
-        //int pageSize,
-        //CancellationToken cancellationToken)
-        //    {
-        //        if (pageNumber < 1)
-        //            pageNumber = 1;
-
-        //        if (pageSize < 1)
-        //            pageSize = 50;
-
-        //        if (pageSize > 100)
-        //            pageSize = 100;
-
-        //        var settlementsQuery = _context.Settlements
-        //            .AsNoTracking()
-        //            .Where(x =>
-        //                x.YearId == yearId &&
-        //                x.PersianExecutionDate == persianExecutionDate);
-
-        //        if (agencyId.HasValue)
-        //        {
-        //            settlementsQuery = settlementsQuery
-        //                .Where(x => x.AgencyId == agencyId.Value);
-        //        }
-
-        //        var settlementData = await settlementsQuery
-        //            .GroupBy(x => x.AgencyId)
-        //            .Select(g => new
-        //            {
-        //                AgencyId = g.Key,
-        //                TotalDebit = g.Sum(x => x.TotalDebit),
-        //                TotalCredit = g.Sum(x => x.TotalCredit)
-        //            })
-        //            .ToListAsync(cancellationToken);
-
-        //        if (settlementData.Count == 0)
-        //        {
-        //            return new SettlementReportResponse
-        //            {
-        //                Items = new List<SettlementReportData>(),
-        //                TotalCount = 0,
-        //                PageNumber = pageNumber,
-        //                PageSize = pageSize,
-        //                TotalBookletCount = 0,
-        //                TotalDebitAmount = 0m,
-        //                TotalCreditAmount = 0m,
-        //                TotalBalance = 0m
-        //            };
-        //        }
-
-        //        var agencyIds = settlementData
-        //            .Select(x => x.AgencyId)
-        //            .Distinct()
-        //            .ToList();
-
-        //        var agencies = await _context.Agencies
-        //            .AsNoTracking()
-        //            .Where(x => agencyIds.Contains(x.Id))
-        //            .Select(x => new
-        //            {
-        //                x.Id,
-        //                x.DetailCode,
-        //                x.Name
-        //            })
-        //            .ToListAsync(cancellationToken);
-
-        //        var paymentData = await _context.Payments
-        //            .AsNoTracking()
-        //            .Where(x =>
-        //                x.YearId == yearId &&
-        //                x.PersianExecutionDate == persianExecutionDate &&
-        //                agencyIds.Contains(x.AgencyId))
-        //            .GroupBy(x => x.AgencyId)
-        //            .Select(g => new
-        //            {
-        //                AgencyId = g.Key,
-        //                PaymentAmount = g.Sum(x => x.Amount)
-        //            })
-        //            .ToListAsync(cancellationToken);
-
-        //        var bookletData = await _context.ExternalExamRecords
-        //            .AsNoTracking()
-        //            .Where(x =>
-        //                x.YearId == yearId &&
-        //                x.PersianExecutionDate == persianExecutionDate &&
-        //                x.CandidateExamId > 0 &&
-        //                agencyIds.Contains(x.AgencyId))
-        //            .GroupBy(x => x.AgencyId)
-        //            .Select(g => new
-        //            {
-        //                AgencyId = g.Key,
-        //                BookletCount = g
-        //                    .Select(x => x.CandidateExamId)
-        //                    .Distinct()
-        //                    .Count()
-        //            })
-        //            .ToListAsync(cancellationToken);
-
-        //        var agencyDictionary = agencies
-        //            .ToDictionary(x => x.Id);
-
-        //        var paymentDictionary = paymentData
-        //            .ToDictionary(
-        //                x => x.AgencyId,
-        //                x => x.PaymentAmount);
-
-        //        var bookletDictionary = bookletData
-        //            .ToDictionary(
-        //                x => x.AgencyId,
-        //                x => x.BookletCount);
-
-        //        var calculatedItems = settlementData
-        //            .Select(settlement =>
-        //            {
-        //                var agency = agencyDictionary.TryGetValue(
-        //                    settlement.AgencyId,
-        //                    out var agencyData)
-        //                    ? agencyData
-        //                    : null;
-
-        //                var paymentCredit = paymentDictionary.TryGetValue(
-        //                    settlement.AgencyId,
-        //                    out var payment)
-        //                    ? payment
-        //                    : 0m;
-
-        //                var totalCredit =
-        //                    settlement.TotalCredit + paymentCredit;
-
-        //                var balance =
-        //                    settlement.TotalDebit - totalCredit;
-
-        //                var bookletCount = bookletDictionary.TryGetValue(
-        //                    settlement.AgencyId,
-        //                    out var booklet)
-        //                    ? booklet
-        //                    : 0;
-
-        //                var status =
-        //                    balance > 0
-        //                        ? SettlementStatus.Debtor
-        //                        : balance < 0
-        //                            ? SettlementStatus.Creditor
-        //                            : SettlementStatus.Settled;
-
-        //                return new SettlementReportData
-        //                {
-        //                    AgencyId = settlement.AgencyId,
-        //                    DetailCode = agency?.DetailCode ?? 0,
-        //                    AgencyName = agency?.Name ?? string.Empty,
-        //                    YearId = yearId,
-        //                    PersianExecutionDate = persianExecutionDate,
-        //                    BookletCount = bookletCount,
-        //                    DebitAmount = settlement.TotalDebit,
-        //                    CreditAmount = totalCredit,
-        //                    Balance = balance,
-        //                    Status = status
-        //                };
-        //            })
-        //            .Where(x => x.Balance != 0)
-        //            .OrderBy(x => x.AgencyName)
-        //            .ToList();
-
-
-        //        // ============================================================
-        //        // Pagination فقط روی Items اعمال می‌شود.
-        //        // جمع کل‌ها قبل از Pagination و بر اساس تمام رکوردها محاسبه می‌شوند.
-        //        // ============================================================
-
-        //        var totalCount = calculatedItems.Count;
-
-        //        var totalBookletCount =
-        //            calculatedItems.Sum(x => x.BookletCount);
-
-        //        var totalDebitAmount =
-        //            calculatedItems.Sum(x => x.DebitAmount);
-
-        //        var totalCreditAmount =
-        //            calculatedItems.Sum(x => x.CreditAmount);
-
-        //        var totalBalance =
-        //            calculatedItems.Sum(x => x.Balance);
-
-
-        //        // فقط رکوردهای صفحه جاری برای Items
-        //        var items = calculatedItems
-        //            .Skip((pageNumber - 1) * pageSize)
-        //            .Take(pageSize)
-        //            .ToList();
-
-
-        //        // ============================================================
-        //        // Total ها مربوط به تمام رکوردها هستند،
-        //        // نه فقط رکوردهای صفحه جاری.
-        //        // ============================================================
-
-        //        return new SettlementReportResponse
-        //        {
-        //            Items = items,
-
-        //            TotalCount = totalCount,
-        //            PageNumber = pageNumber,
-        //            PageSize = pageSize,
-
-        //            // جمع کل تمام رکوردها
-        //            TotalBookletCount = totalBookletCount,
-        //            TotalDebitAmount = totalDebitAmount,
-        //            TotalCreditAmount = totalCreditAmount,
-        //            TotalBalance = totalBalance
-        //        };
-        //    }
-
-
+       
 
         public async Task<SettlementReportResponse> GetReportAsync(
      int? agencyId,
@@ -746,109 +531,12 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
 
             return (long)year * 10000 + month * 100 + day;
         }
-        //   public async Task<List<SettlementDetailItemDto>> GetSettlementDetailsAsync(
-        //int agencyId,
-        //int yearId,
-        //string persianExecutionDate,
-        //CancellationToken cancellationToken)
-        //   {
-        //       var items = await (
-        //           from item in _context.SettlementItems
 
-        //           join package in _context.Packages
-        //               on item.PackageId equals package.Id
-
-        //           join educationalLevel in _context.EducationalLevels
-        //               on item.EducationalLevelId equals educationalLevel.Id
-
-        //           join studyField in _context.StudyFields
-        //               on item.StudyFieldId equals studyField.Id
-
-        //           join examMode in _context.ExamModes
-        //               on item.ExamModeId equals examMode.Id
-
-        //               join agencies in _context.Agencies 
-        //               on item.AgencyId equals agencies.Id
-
-        //               join yearTypes in _context.YearTypes
-        //               on item.YearId equals yearTypes.Id
-
-        //               join registrationPlan in _context.RegistrationPlans
-        //               on item.RegistrationPlanId equals registrationPlan.Id
-
-        //           where item.AgencyId == agencyId
-        //                 && item.YearId == yearId
-        //                 && item.PersianExecutionDate == persianExecutionDate
-
-        //           orderby item.EducationalLevelId, item.StudyFieldId
-
-        //           select new SettlementDetailItemDto
-        //           {
-        //               SettlementItemId = item.Id,
-
-        //               PackageId = item.PackageId,
-        //               PackageName = package.Name,
-
-        //               ExamModeId = item.ExamModeId,
-        //               ExamModeName = examMode.Name,
-        //               AgencyName = agencies.Name,
-        //               YearName = yearTypes.Name,
-        //               EducationalLevelId = item.EducationalLevelId,
-        //               EducationalLevelName = educationalLevel.Name,
-        //               RegistrationPlanId = registrationPlan.Id,
-        //               RegistrationPlanName = registrationPlan.Name,
-        //               StudyFieldId = item.StudyFieldId,
-        //               StudyFieldName = studyField.Name,
-
-        //               CandidateCount = item.CandidateCount,
-        //               FreeCandidateCount = item.FreeCandidateCount,
-        //               PaidCandidateCount = item.PaidCandidateCount,
-
-        //               UnitPrice = item.UnitPrice,
-        //               BaseAmount = item.BaseAmount,
-
-        //               DiscountPercent = item.GajPercent,
-
-        //               DiscountAmount =
-        //                   item.BaseAmount * item.GajPercent / 100m,
-
-        //               AgencyPercent = item.AgencyPercent,
-
-        //               AgencyAmount =
-        //                   item.BaseAmount * item.AgencyPercent / 100m,
-
-        //               CreditAmount =
-        //                   item.BaseAmount * item.AgencyPercent / 100m,
-
-        //               TotalAmount =
-        //                   item.BaseAmount -
-        //                   (item.BaseAmount * item.GajPercent / 100m)
-        //           }
-        //       ).ToListAsync(cancellationToken);
-
-        //       foreach (var item in items)
-        //       {
-        //           item.StageTypeId = GetStageTypeId(
-        //               item.EducationalLevelId);
-
-        //           item.StageTypeName = GetStageTypeName(
-        //               item.EducationalLevelId);
-
-        //           item.Title =
-        //               $"{item.ExamModeName} - " +
-        //               $"{item.StageTypeName} - " +
-        //               $"پایه {item.EducationalLevelName} - " +
-        //               $"رشته {item.StudyFieldName}";
-        //       }
-
-        //       return items;
-        //   }
-
-public async Task<SettlementDetailsDto> GetSettlementDetailsAsync(
-    int agencyId,
-    int yearId,
-    string persianExecutionDate,
-    CancellationToken cancellationToken)
+        public async Task<SettlementDetailsDto> GetSettlementDetailsAsync(
+      int agencyId,
+      int yearId,
+      string persianExecutionDate,
+      CancellationToken cancellationToken)
         {
             var items = await (
                 from item in _context.SettlementOrderItems.AsNoTracking()
@@ -1251,325 +939,577 @@ public async Task<SettlementDetailsDto> GetSettlementDetailsAsync(
                     .Sum(x => x.StudentAmount),
 
 
-                    TotalDebit = totalDebit,
+                TotalDebit = totalDebit,
 
                 Balance = balance,
             };
         }
 
 
+
+
+        public async Task<CombinedSettlementDetailsDto> GetCombinedSettlementDetailsAsync(
+            int agencyId,
+            int yearId,
+            string persianExecutionDate,
+            CancellationToken cancellationToken)
+        {
+            var exam = await GetSettlementDetailsAsync(
+                agencyId,
+                yearId,
+                persianExecutionDate,
+                cancellationToken);
+
+            var rawItems = await (
+                from item in _context.SingleLessonSettlementItems.AsNoTracking()
+                join input in _context.SingleLessonExternalInputs.AsNoTracking()
+                    on item.ExternalInputId equals input.Id
+                join package in _context.Packages.AsNoTracking()
+                    on item.PackageId equals package.Id
+                join level in _context.EducationalLevels.AsNoTracking()
+                    on item.EducationalLevelId equals level.Id
+                join field in _context.StudyFields.AsNoTracking()
+                    on item.StudyFieldId equals field.Id
+                join mode in _context.ExamModes.AsNoTracking()
+                    on item.ExamModeId equals mode.Id
+                join plan in _context.RegistrationPlans.AsNoTracking()
+                    on item.RegistrationPlanId equals plan.Id
+                   join singleLessons in _context.SingleLessons.AsNoTracking()
+                   on item.CourseId equals singleLessons.CourseId 
+                where item.AgencyId == agencyId
+                      && item.YearId == yearId
+                      && item.PersianExecutionDate == persianExecutionDate
+                select new
+                {
+                    item.CourseId,
+                    singleLessons.CourseName,
+                    item.EducationalLevelId,
+                    EducationalLevelName = level.Name,
+                    item.StudyFieldId,
+                    StudyFieldName = field.Name,
+                    item.PackageId,
+                    PackageName = package.Name,
+                    item.ExamModeId,
+                    ExamModeName = mode.Name,
+                    item.RegistrationPlanId,
+                    RegistrationPlanName = plan.Name,
+                    input.CandidateExamId,
+                    item.Quantity,
+                    item.DebitAmount,
+                    item.CreditAmount
+                })
+                .ToListAsync(cancellationToken);
+
+            var singleLessonItems = rawItems
+                .GroupBy(x => new
+                {
+                    x.CourseId,
+                    x.EducationalLevelId,
+                    x.EducationalLevelName,
+                    x.StudyFieldId,
+                    x.StudyFieldName,
+                    x.PackageId,
+                    x.PackageName,
+                    x.CourseName,
+                    x.ExamModeId,
+                    x.ExamModeName,
+                    x.RegistrationPlanId,
+                    x.RegistrationPlanName
+                })
+                .Select(g =>
+                {
+                    var totalDebit = g.Sum(x => x.DebitAmount);
+                    var totalCredit = g.Sum(x => x.CreditAmount);
+
+                    return new SingleLessonReportItemDto
+                    {
+                        CourseId = g.Key.CourseId,
+
+                        EducationalLevelId = g.Key.EducationalLevelId,
+                        EducationalLevelName = g.Key.EducationalLevelName,
+
+                        StudyFieldId = g.Key.StudyFieldId,
+                        StudyFieldName = g.Key.StudyFieldName,
+
+                        PackageId = g.Key.PackageId,
+                        PackageName = g.Key.PackageName,
+                        CourseName = g.Key.CourseName,
+                        ExamModeId = g.Key.ExamModeId,
+                        ExamModeName = g.Key.ExamModeName,
+
+                        RegistrationPlanId = g.Key.RegistrationPlanId,
+                        RegistrationPlanName = g.Key.RegistrationPlanName,
+
+                        SingleLessonCandidateCount = g
+                            .Select(x => x.CandidateExamId)
+                            .Distinct()
+                            .Count(),
+
+                        SingleLessonQuantity = g.Sum(x => x.Quantity),
+
+                        SingleLessonTotalDebit = totalDebit,
+                        SingleLessonTotalCredit = totalCredit,
+                        SingleLessonBalance = totalDebit - totalCredit
+                    };
+                })
+                .OrderBy(x => x.PackageId)
+                .ThenBy(x => x.EducationalLevelId)
+                .ThenBy(x => x.StudyFieldId)
+                .ThenBy(x => x.CourseId)
+                .ToList();
+
+            // طرح ۸ نمایش داده می‌شود، اما در جمع مالی وارد نمی‌شود.
+            var financialItems = singleLessonItems
+                .Where(x => x.RegistrationPlanId != 8)
+                .ToList();
+
+            var singleLessonTotalDebit = financialItems
+                .Sum(x => x.SingleLessonTotalDebit);
+
+            var singleLessonTotalCredit = financialItems
+                .Sum(x => x.SingleLessonTotalCredit);
+
+            var singleLesson = new SingleLessonReportDto
+            {
+                Items = singleLessonItems,
+
+                SingleLessonTotalDebit = singleLessonTotalDebit,
+                SingleLessonTotalCredit = singleLessonTotalCredit,
+
+                // مانده منفی مجاز است.
+                SingleLessonBalance =
+                    singleLessonTotalDebit - singleLessonTotalCredit,
+
+                SingleLessonTotalCourseCount = rawItems
+    .Select(x => x.CandidateExamId)
+    .Distinct()
+    .Count()
+            };
+
+            return new CombinedSettlementDetailsDto
+            {
+                Exam = exam,
+                SingleLesson = singleLesson
+            };
+        }
+
+
+
         //public async Task<SettlementDetailsDto> GetSettlementDetailsAsync(
-        //int agencyId,
-        //int yearId,
-        //string persianExecutionDate,
-        //CancellationToken cancellationToken)
-        //{
-        //    var items = await (
-        //        from item in _context.SettlementItems.AsNoTracking()
-        //        join package in _context.Packages
-        //            on item.PackageId equals package.Id
-        //        join educationalLevel in _context.EducationalLevels
-        //            on item.EducationalLevelId equals educationalLevel.Id
-        //        join studyField in _context.StudyFields
-        //            on item.StudyFieldId equals studyField.Id
-        //        join examMode in _context.ExamModes
-        //            on item.ExamModeId equals examMode.Id
-        //        join agency in _context.Agencies
-        //            on item.AgencyId equals agency.Id
-        //        join yearType in _context.YearTypes
-        //            on item.YearId equals yearType.Id
-        //        join registrationPlan in _context.RegistrationPlans
-        //            on item.RegistrationPlanId equals registrationPlan.Id
-        //        where item.AgencyId == agencyId
-        //              && item.YearId == yearId
-        //              && item.PersianExecutionDate == persianExecutionDate
-        //        orderby item.ExamModeId, item.EducationalLevelId, item.StudyFieldId
-        //        select new SettlementDetailItemDto
+        //    int agencyId,
+        //    int yearId,
+        //    string persianExecutionDate,
+        //    CancellationToken cancellationToken)
         //        {
-        //            SettlementItemId = item.Id,
-        //            SettlementId = item.SettlementId,
+        //            var items = await (
+        //                from item in _context.SettlementOrderItems.AsNoTracking()
 
-        //            PackageId = item.PackageId,
-        //            PackageName = package.Name,
+        //                join order in _context.SettlementOrders.AsNoTracking()
+        //                    on item.SettlementOrderId equals order.Id
 
-        //            ExamModeId = item.ExamModeId,
-        //            ExamModeName = examMode.Name,
+        //                join package in _context.Packages
+        //                    on item.PackageId equals package.Id
 
-        //            AgencyName = agency.Name,
-        //            YearName = yearType.Name,
+        //                join educationalLevel in _context.EducationalLevels
+        //                    on item.EducationalLevelId equals educationalLevel.Id
 
-        //            EducationalLevelId = item.EducationalLevelId,
-        //            EducationalLevelName = educationalLevel.Name,
+        //                join studyField in _context.StudyFields
+        //                    on item.StudyFieldId equals studyField.Id
 
-        //            RegistrationPlanId = item.RegistrationPlanId,
-        //            RegistrationPlanName = registrationPlan.Name,
+        //                join examMode in _context.ExamModes
+        //                    on item.ExamModeId equals examMode.Id
 
-        //            StudyFieldId = item.StudyFieldId,
-        //            StudyFieldName = studyField.Name,
+        //                join agency in _context.Agencies
+        //                    on item.AgencyId equals agency.Id
 
-        //            CandidateCount = item.CandidateCount,
-        //            FreeCandidateCount = item.FreeCandidateCount,
-        //            PaidCandidateCount = item.PaidCandidateCount,
+        //                join yearType in _context.YearTypes
+        //                    on item.YearId equals yearType.Id
 
-        //            UnitPrice = item.UnitPrice,
-        //            BaseAmount = item.BaseAmount,
+        //                join registrationPlan in _context.RegistrationPlans
+        //                    on item.RegistrationPlanId equals registrationPlan.Id
 
-        //            DiscountPercent = item.GajPercent,
-        //            DiscountAmount = item.BaseAmount * item.GajPercent / 100m,
+        //                where item.AgencyId == agencyId
+        //                      && item.YearId == yearId
+        //                      && item.PersianExecutionDate == persianExecutionDate
 
-        //            AgencyPercent = item.AgencyPercent,
-        //            AgencyAmount = item.AgencyAmount,
-        //            GajAmount = item.GajAmount,
-        //            StudentAmount = item.StudentAmount,
+        //                orderby item.ExamModeId,
+        //                        item.EducationalLevelId,
+        //                        item.StudyFieldId
 
-        //            DebitAmount = item.DebitAmount,
-        //            CreditAmount = item.CreditAmount,
+        //                select new SettlementDetailItemDto
+        //                {
+        //                    SettlementItemId = item.Id,
 
-        //            TotalAmount = item.BaseAmount -
-        //                          (item.BaseAmount * item.GajPercent / 100m)
+        //                    SettlementId = order.Id,
+
+        //                    PackageId = item.PackageId,
+        //                    PackageName = package.Name,
+
+        //                    ExamModeId = item.ExamModeId,
+        //                    ExamModeName = examMode.Name,
+
+        //                    AgencyName = agency.Name,
+        //                    YearName = yearType.Name,
+        //                    DetailCode = agency.DetailCode,
+        //                    EducationalLevelId = item.EducationalLevelId,
+        //                    EducationalLevelName = educationalLevel.Name,
+
+        //                    RegistrationPlanId = item.RegistrationPlanId,
+        //                    RegistrationPlanName = registrationPlan.Name,
+
+        //                    StudyFieldId = item.StudyFieldId,
+        //                    StudyFieldName = studyField.Name,
+
+        //                    CandidateCount = item.CandidateCount,
+        //                    FreeCandidateCount = item.FreeCandidateCount,
+        //                    PaidCandidateCount = item.PaidCandidateCount,
+
+        //                    UnitPrice = item.UnitPrice,
+        //                    BaseAmount = item.BaseAmount,
+
+        //                    DiscountPercent = item.GajPercent,
+        //                    DiscountAmount = item.BaseAmount * item.GajPercent / 100m,
+
+        //                    AgencyPercent = item.AgencyPercent,
+        //                    AgencyAmount = item.AgencyAmount,
+        //                    GajAmount = item.GajAmount,
+        //                    StudentAmount = item.StudentAmount,
+
+        //                    DebitAmount = item.DebitAmount,
+        //                    CreditAmount = item.CreditAmount,
+
+        //                    TotalAmount = item.BaseAmount -
+        //                                  (item.BaseAmount * item.GajPercent / 100m)
+        //                }
+        //            ).ToListAsync(cancellationToken);
+
+        //            foreach (var item in items)
+        //            {
+        //                item.StageTypeId = GetStageTypeId(item.EducationalLevelId);
+        //                item.StageTypeName = GetStageTypeName(item.EducationalLevelId);
+
+        //                item.Title =
+        //                    $"{item.ExamModeName} - " +
+        //                    $"{item.StageTypeName} - " +
+        //                    $"پایه {item.EducationalLevelName} - " +
+        //                    $"رشته {item.StudyFieldName}";
+        //            }
+
+        //            var inPersonItems = items;
+
+        //            var onlineItems = items;
+
+        //            // -----------------------------------------
+        //            // سهمیه پلن 5 حضوری
+        //            // -----------------------------------------
+
+        //            var plan5InPersonItems = items
+        //                .Where(x =>
+        //                    x.ExamModeId == 0 &&
+        //                    x.RegistrationPlanId == 5)
+        //                .ToList();
+
+        //            var totalPlan5InPersonCandidates = plan5InPersonItems
+        //                .Sum(x => x.CandidateCount);
+
+        //            var plan5Quota = await _context.SettlementOrderItems
+        //                .AsNoTracking()
+        //                .Where(x =>
+        //                    x.AgencyId == agencyId &&
+        //                    x.YearId == yearId &&
+        //                    x.PersianExecutionDate == persianExecutionDate &&
+        //                    x.ExamModeId == 0 &&
+        //                    x.RegistrationPlanId == 5)
+        //                .Select(x => new
+        //                {
+        //                    x.FreeQuotaCount,
+        //                    x.OneHundredThousandQuotaCount
+        //                })
+        //                .FirstOrDefaultAsync(cancellationToken);
+
+        //            var totalInPersonFreeQuota =
+        //                plan5Quota?.FreeQuotaCount ?? 0;
+
+        //            var totalInPersonOneHundredThousandQuota =
+        //                plan5Quota?.OneHundredThousandQuotaCount ?? 0;
+
+        //            var totalInPersonFreeQuotaUsed =
+        //                Math.Min(
+        //                    totalInPersonFreeQuota,
+        //                    totalPlan5InPersonCandidates);
+
+        //            var remainingAfterFreeQuota =
+        //                totalPlan5InPersonCandidates -
+        //                totalInPersonFreeQuotaUsed;
+
+        //            var totalInPersonOneHundredThousandQuotaUsed =
+        //                Math.Min(
+        //                    totalInPersonOneHundredThousandQuota,
+        //                    remainingAfterFreeQuota);
+
+        //            // -----------------------------------------
+        //            // Settlement
+        //            // -----------------------------------------
+
+        //            var settlementIds = items
+        //                .Select(x => x.SettlementId)
+        //                .Distinct()
+        //                .ToList();
+
+        //            var settlementInfo = await _context.Settlements
+        //       .AsNoTracking()
+        //       .Where(x =>
+        //           x.AgencyId == agencyId &&
+        //           x.YearId == yearId &&
+        //           x.PersianExecutionDate == persianExecutionDate)
+        //       .Select(x => new
+        //       {
+        //           x.Id,
+        //           x.TotalDebit,
+        //           x.TotalCredit,
+        //           x.Balance,
+        //           x.PersianExecutionDate
+        //       })
+        //       .FirstOrDefaultAsync(cancellationToken);
+
+        //            var totalDebit = settlementInfo?.TotalDebit ?? 0;
+        //            var balance = settlementInfo?.Balance ?? 0;
+
+        //            // -----------------------------------------
+        //            // Contract Floor
+        //            // -----------------------------------------
+
+        //            var contractFloorAmount = await _context.SettlementOrderItems
+        //                .AsNoTracking()
+        //                .Where(x =>
+        //                    x.AgencyId == agencyId &&
+        //                    x.YearId == yearId &&
+        //                    x.PersianExecutionDate == persianExecutionDate)
+        //                .Select(x => x.ContractFloorAmount)
+        //                .FirstOrDefaultAsync(cancellationToken);
+
+        //            // -----------------------------------------
+        //            // نتیجه
+        //            // -----------------------------------------
+
+        //            return new SettlementDetailsDto
+        //            {
+        //                Items = items,
+
+        //                TotalBaseAmount = items.Sum(x => x.BaseAmount),
+
+        //                ContractFloorAmount = contractFloorAmount,
+
+        //                // سهمیه حضوری فقط پلن 5
+        //                TotalInPersonFreeQuota = totalInPersonFreeQuota,
+
+        //                TotalInPersonFreeQuotaUsed =
+        //                    totalInPersonFreeQuotaUsed,
+
+        //                TotalInPersonOneHundredThousandQuota =
+        //                    totalInPersonOneHundredThousandQuota,
+
+        //                TotalInPersonOneHundredThousandQuotaUsed =
+        //                    totalInPersonOneHundredThousandQuotaUsed,
+
+        //                // -----------------------------------------
+        //                // حضوری - آزاد
+        //                // -----------------------------------------
+
+        //                TotalInPersonFreeAgencyDebit = inPersonItems
+        //                    .Where(x =>
+        //                        x.RegistrationPlanId == 1 &&
+        //                        x.ExamModeId == 0)
+        //                    .Sum(x => x.DebitAmount),
+
+        //                TotalInPersonFreeGajCredit = inPersonItems
+        //                    .Where(x =>
+        //                        x.RegistrationPlanId == 1 &&
+        //                        x.ExamModeId == 0)
+        //                    .Sum(x => x.AgencyAmount),
+
+        //                TotalPersonStudentCountFree = items
+        //                    .Where(x =>
+        //                        x.RegistrationPlanId == 1 &&
+        //                        x.ExamModeId == 0)
+        //                    .Sum(x => x.CandidateCount),
+
+        //                // -----------------------------------------
+        //                // حضوری - حکمت
+        //                // -----------------------------------------
+
+        //                TotalInPersonHekmatAgencyCredit = inPersonItems
+        //                    .Where(x =>
+        //                        x.RegistrationPlanId == 2 &&
+        //                        x.ExamModeId == 0)
+        //                    .Sum(x => x.CreditAmount),
+
+        //                TotalInPersonHekmatGajDebit = inPersonItems
+        //                    .Where(x =>
+        //                        x.RegistrationPlanId == 2 &&
+        //                        x.ExamModeId == 0)
+        //                    .Sum(x => x.GajAmount),
+
+        //                TotalStudentPersonHekmat = items
+        //                    .Where(x =>
+        //                        x.RegistrationPlanId == 2 &&
+        //                        x.ExamModeId == 0)
+        //                    .Sum(x => x.CandidateCount),
+
+        //                // -----------------------------------------
+        //                // حضوری - سایت
+        //                // -----------------------------------------
+
+        //                TotalInPersonSiteAgencyCredit = inPersonItems
+        //                    .Where(x =>
+        //                        x.RegistrationPlanId == 8 &&
+        //                        x.ExamModeId == 0)
+        //                    .Sum(x => x.AgencyAmount),
+
+        //                TotalInPersonSiteGajDebit = inPersonItems
+        //                    .Where(x =>
+        //                        x.RegistrationPlanId == 8 &&
+        //                        x.ExamModeId == 0)
+        //                    .Sum(x => x.GajAmount),
+
+        //                TotalStudentPersonSite = items
+        //                    .Where(x =>
+        //                        x.RegistrationPlanId == 8 &&
+        //                        x.ExamModeId == 0)
+        //                    .Sum(x => x.CandidateCount),
+
+        //                // -----------------------------------------
+        //                // حضوری - سهمیه ای
+        //                // -----------------------------------------
+
+        //                TotalInPersonScholarshipAgencyDebit = inPersonItems
+        //                    .Where(x =>
+        //                        (x.RegistrationPlanId == 3 ||
+        //                         x.RegistrationPlanId == 5) &&
+        //                        x.ExamModeId == 0)
+        //                    .Sum(x => x.DebitAmount),
+
+        //                TotalInPersonScholarshipGajCredit = inPersonItems
+        //                    .Where(x =>
+        //                        (x.RegistrationPlanId == 3 ||
+        //                         x.RegistrationPlanId == 5) &&
+        //                        x.ExamModeId == 0)
+        //                    .Sum(x => x.CreditAmount),
+
+        //                TotalStudentPersonScholarship = items
+        //                    .Where(x =>
+        //                        (x.RegistrationPlanId == 3 ||
+        //                         x.RegistrationPlanId == 5) &&
+        //                        x.ExamModeId == 0)
+        //                    .Sum(x => x.CandidateCount),
+
+        //                // -----------------------------------------
+        //                // آنلاین - آزاد
+        //                // -----------------------------------------
+
+        //                TotalOnlineFreeAgencyDebit = onlineItems
+        //                    .Where(x =>
+        //                        x.RegistrationPlanId == 1 &&
+        //                        x.ExamModeId == 1)
+        //                    .Sum(x => x.DebitAmount),
+
+        //                TotalOnlineFreeGajCredit = onlineItems
+        //                    .Where(x =>
+        //                        x.RegistrationPlanId == 1 &&
+        //                        x.ExamModeId == 1)
+        //                    .Sum(x => x.AgencyAmount),
+
+        //                TotalStudentOnlineFree = items
+        //                    .Where(x =>
+        //                        x.RegistrationPlanId == 1 &&
+        //                        x.ExamModeId == 1)
+        //                    .Sum(x => x.CandidateCount),
+
+        //                // -----------------------------------------
+        //                // آنلاین - حکمت
+        //                // -----------------------------------------
+
+        //                TotalOnlineHekmatAgencyCredit = onlineItems
+        //                    .Where(x =>
+        //                        x.RegistrationPlanId == 2 &&
+        //                        x.ExamModeId == 1)
+        //                    .Sum(x => x.CreditAmount),
+
+        //                TotalOnlineHekmatGajDebit = onlineItems
+        //                    .Where(x =>
+        //                        x.RegistrationPlanId == 2 &&
+        //                        x.ExamModeId == 1)
+        //                    .Sum(x => x.GajAmount),
+
+        //                TotalStudentOnlineHekmat = items
+        //                    .Where(x =>
+        //                        x.RegistrationPlanId == 2 &&
+        //                        x.ExamModeId == 1)
+        //                    .Sum(x => x.CandidateCount),
+
+        //                // -----------------------------------------
+        //                // آنلاین - سایت
+        //                // -----------------------------------------
+
+        //                TotalOnlineSiteAgencyCredit = onlineItems
+        //                    .Where(x =>
+        //                        x.RegistrationPlanId == 8 &&
+        //                        x.ExamModeId == 1)
+        //                    .Sum(x => x.AgencyAmount),
+
+        //                TotalOnlineSiteGajDebit = onlineItems
+        //                    .Where(x =>
+        //                        x.RegistrationPlanId == 8 &&
+        //                        x.ExamModeId == 1)
+        //                    .Sum(x => x.GajAmount),
+
+        //                TotalStudentOnlineSite = onlineItems
+        //                    .Where(x =>
+        //                        x.RegistrationPlanId == 8 &&
+        //                        x.ExamModeId == 1)
+        //                    .Sum(x => x.CandidateCount),
+
+        //                // -----------------------------------------
+        //                // آنلاین - سهمیه ای
+        //                // -----------------------------------------
+
+        //                TotalOnlineScholarshipAgencyCredit = onlineItems
+        //                    .Where(x =>
+        //                        (x.RegistrationPlanId == 3 ||
+        //                         x.RegistrationPlanId == 5) &&
+        //                        x.ExamModeId == 1)
+        //                    .Sum(x => x.AgencyAmount),
+
+        //                TotalOnlineScholarshipGajCredit = onlineItems
+        //                    .Where(x =>
+        //                        (x.RegistrationPlanId == 3 ||
+        //                         x.RegistrationPlanId == 5) &&
+        //                        x.ExamModeId == 1)
+        //                    .Sum(x => x.GajAmount),
+
+        //                TotalStudentOnlineScholarship = items
+        //                    .Where(x =>
+        //                        (x.RegistrationPlanId == 3 ||
+        //                         x.RegistrationPlanId == 5) &&
+        //                        x.ExamModeId == 1)
+        //                    .Sum(x => x.CandidateCount),
+
+        //                // -----------------------------------------
+        //                // دانش آموز
+        //                // -----------------------------------------
+
+        //                TotalOnlineStudentAmount = onlineItems
+        //                    .Sum(x => x.StudentAmount),
+
+
+        //                    TotalDebit = totalDebit,
+
+        //                Balance = balance,
+        //            };
         //        }
-        //    ).ToListAsync(cancellationToken);
 
-        //    foreach (var item in items)
-        //    {
-        //        item.StageTypeId = GetStageTypeId(item.EducationalLevelId);
-        //        item.StageTypeName = GetStageTypeName(item.EducationalLevelId);
 
-        //        item.Title =
-        //            $"{item.ExamModeName} - " +
-        //            $"{item.StageTypeName} - " +
-        //            $"پایه {item.EducationalLevelName} - " +
-        //            $"رشته {item.StudyFieldName}";
-        //    }
 
-        //    var inPersonItems = items;
-
-        //    var onlineItems = items;
-
-        //    var totalStudentFree = items;
-
-        //    var plan5InPersonItems = items
-        //        .Where(x =>
-        //            x.ExamModeId == 0 &&
-        //            x.RegistrationPlanId == 5)
-        //        .ToList();
-
-        //    var totalPlan5InPersonCandidates = plan5InPersonItems
-        //        .Sum(x => x.CandidateCount);
-
-        //    var plan5Quota = await _context.SettlementItems
-        //        .AsNoTracking()
-        //        .Where(x =>
-        //            x.AgencyId == agencyId &&
-        //            x.YearId == yearId &&
-        //            x.PersianExecutionDate == persianExecutionDate &&
-        //            x.ExamModeId == 0 &&
-        //            x.RegistrationPlanId == 5)
-        //        .Select(x => new
-        //        {
-        //            x.FreeQuotaCount,
-        //            x.OneHundredThousandQuotaCount
-        //        })
-        //        .FirstOrDefaultAsync(cancellationToken);
-
-        //    var totalInPersonFreeQuota =
-        //        plan5Quota?.FreeQuotaCount ?? 0;
-
-        //    var totalInPersonOneHundredThousandQuota =
-        //        plan5Quota?.OneHundredThousandQuotaCount ?? 0;
-
-        //    var totalInPersonFreeQuotaUsed =
-        //        Math.Min(
-        //            totalInPersonFreeQuota,
-        //            totalPlan5InPersonCandidates);
-
-        //    var remainingAfterFreeQuota =
-        //        totalPlan5InPersonCandidates -
-        //        totalInPersonFreeQuotaUsed;
-
-        //    var totalInPersonOneHundredThousandQuotaUsed =
-        //        Math.Min(
-        //            totalInPersonOneHundredThousandQuota,
-        //            remainingAfterFreeQuota);
-
-        //    var settlementIds = items
-        //        .Select(x => x.SettlementId)
-        //        .Distinct()
-        //        .ToList();
-
-        //    var settlementInfo = await _context.Settlements
-        //        .AsNoTracking()
-        //        .Where(x =>
-        //            settlementIds.Contains(x.Id) &&
-        //            x.AgencyId == agencyId &&
-        //            x.YearId == yearId)
-        //        .Select(x => new
-        //        {
-        //            x.Id,
-        //            x.TotalDebit
-        //        })
-        //        .ToListAsync(cancellationToken);
-
-        //    var totalDebit = settlementInfo
-        //        .Select(x => x.TotalDebit)
-        //        .FirstOrDefault();
-
-        //    var contractFloorAmount = await _context.SettlementItems
-        //        .AsNoTracking()
-        //        .Where(x =>
-        //            x.AgencyId == agencyId &&
-        //            x.YearId == yearId &&
-        //            x.PersianExecutionDate == persianExecutionDate)
-        //        .Select(x => x.ContractFloorAmount)
-        //        .FirstOrDefaultAsync(cancellationToken);
-
-        //    return new SettlementDetailsDto
-        //    {
-        //        Items = items,
-
-        //        TotalBaseAmount = items.Sum(x => x.BaseAmount),
-
-        //        ContractFloorAmount = contractFloorAmount,
-        //        TotalDebit = totalDebit,
-
-        //        // سهمیه حضوری فقط پلن 5
-        //        TotalInPersonFreeQuota = totalInPersonFreeQuota,
-        //        TotalInPersonFreeQuotaUsed = totalInPersonFreeQuotaUsed,
-
-        //        TotalInPersonOneHundredThousandQuota =
-        //            totalInPersonOneHundredThousandQuota,
-
-        //        TotalInPersonOneHundredThousandQuotaUsed =
-        //            totalInPersonOneHundredThousandQuotaUsed,
-
-        //        //حضوری و آزاد
-
-        //        TotalInPersonFreeAgencyDebit = inPersonItems
-        //            .Where(x => x.RegistrationPlanId == 1 && x.ExamModeId == 0)
-        //            .Sum(x => x.DebitAmount),
-
-        //        TotalInPersonFreeGajCredit = inPersonItems
-        //            .Where(x => x.RegistrationPlanId == 1 && x.ExamModeId == 0)
-        //            .Sum(x => x.AgencyAmount),
-
-        //        TotalPersonStudentCountFree = items
-        //            .Where(x => x.RegistrationPlanId == 1 && x.ExamModeId == 0)
-        //            .Sum(x => x.CandidateCount),
-
-        //        //حکمت حضوری
-
-        //        TotalInPersonHekmatAgencyCredit = inPersonItems
-        //            .Where(x => x.RegistrationPlanId == 2 && x.ExamModeId == 0)
-        //            .Sum(x => x.CreditAmount),
-
-        //        TotalInPersonHekmatGajDebit = inPersonItems
-        //            .Where(x => x.RegistrationPlanId == 2 && x.ExamModeId == 0)
-        //            .Sum(x => x.GajAmount),
-
-        //        TotalStudentPersonHekmat = items
-        //            .Where(x => x.RegistrationPlanId == 2 && x.ExamModeId == 0)
-        //            .Sum(x => x.CandidateCount),
-
-        //        // سایت حضوری
-
-        //        TotalInPersonSiteAgencyCredit = inPersonItems
-        //            .Where(x => x.RegistrationPlanId == 8 && x.ExamModeId == 0)
-        //            .Sum(x => x.AgencyAmount),
-
-        //        TotalInPersonSiteGajDebit = inPersonItems
-        //            .Where(x => x.RegistrationPlanId == 8 && x.ExamModeId == 0)
-        //            .Sum(x => x.GajAmount),
-
-        //        TotalStudentPersonSite = items
-        //            .Where(x => x.RegistrationPlanId == 8 && x.ExamModeId == 0)
-        //            .Sum(x => x.CandidateCount),
-
-        //        // سهمیه ای حضوری
-
-        //        TotalInPersonScholarshipAgencyDebit = inPersonItems
-        //            .Where(x =>
-        //                (x.RegistrationPlanId == 3 || x.RegistrationPlanId == 5) &&
-        //                x.ExamModeId == 0)
-        //            .Sum(x => x.DebitAmount),
-
-        //        TotalInPersonScholarshipGajCredit = inPersonItems
-        //            .Where(x =>
-        //                (x.RegistrationPlanId == 3 || x.RegistrationPlanId == 5) &&
-        //                x.ExamModeId == 0)
-        //            .Sum(x => x.CreditAmount),
-
-        //        TotalStudentPersonScholarship = items
-        //            .Where(x =>
-        //                (x.RegistrationPlanId == 3 || x.RegistrationPlanId == 5) &&
-        //                x.ExamModeId == 0)
-        //            .Sum(x => x.CandidateCount),
-
-        //        // آزاد آنلاین
-
-        //        TotalOnlineFreeAgencyDebit = onlineItems
-        //            .Where(x => x.RegistrationPlanId == 1 && x.ExamModeId == 1)
-        //            .Sum(x => x.DebitAmount),
-
-        //        TotalOnlineFreeGajCredit = onlineItems
-        //            .Where(x => x.RegistrationPlanId == 1 && x.ExamModeId == 1)
-        //            .Sum(x => x.AgencyAmount),
-
-        //        TotalStudentOnlineFree = items
-        //            .Where(x => x.RegistrationPlanId == 1 && x.ExamModeId == 1)
-        //            .Sum(x => x.CandidateCount),
-
-        //        // حکمت آنلاین
-
-        //        TotalOnlineHekmatAgencyCredit = onlineItems
-        //            .Where(x => x.RegistrationPlanId == 2 && x.ExamModeId == 1)
-        //            .Sum(x => x.CreditAmount),
-
-        //        TotalOnlineHekmatGajDebit = onlineItems
-        //            .Where(x => x.RegistrationPlanId == 2 && x.ExamModeId == 1)
-        //            .Sum(x => x.GajAmount),
-
-        //        TotalStudentOnlineHekmat = items
-        //            .Where(x => x.RegistrationPlanId == 2 && x.ExamModeId == 1)
-        //            .Sum(x => x.CandidateCount),
-
-        //        // ثبت نام از سایت
-
-        //        TotalOnlineSiteAgencyCredit = onlineItems
-        //            .Where(x => x.RegistrationPlanId == 8 && x.ExamModeId == 1)
-        //            .Sum(x => x.AgencyAmount),
-
-        //        TotalOnlineSiteGajDebit = onlineItems
-        //            .Where(x => x.RegistrationPlanId == 8 && x.ExamModeId == 1)
-        //            .Sum(x => x.GajAmount),
-
-        //        TotalStudentOnlineSite = items
-        //            .Where(x => x.RegistrationPlanId == 8 && x.ExamModeId == 1)
-        //            .Sum(x => x.CandidateCount),
-
-        //        TotalOnlineScholarshipAgencyCredit = onlineItems
-        //            .Where(x =>
-        //                (x.RegistrationPlanId == 3 || x.RegistrationPlanId == 5) &&
-        //                x.ExamModeId == 1)
-        //            .Sum(x => x.AgencyAmount),
-
-        //        TotalOnlineScholarshipGajCredit = onlineItems
-        //            .Where(x =>
-        //                (x.RegistrationPlanId == 3 || x.RegistrationPlanId == 5) &&
-        //                x.ExamModeId == 1)
-        //            .Sum(x => x.GajAmount),
-
-        //        TotalStudentOnlineScholarship = items
-        //            .Where(x =>
-        //                (x.RegistrationPlanId == 3 || x.RegistrationPlanId == 5) &&
-        //                x.ExamModeId == 1)
-        //            .Sum(x => x.CandidateCount),
-
-        //        // دانش آموز
-
-        //        TotalOnlineStudentAmount = onlineItems
-        //            .Sum(x => x.StudentAmount)
-        //    };
-        //}
 
         private static int GetStageTypeId(int educationalLevelId)
             => educationalLevelId switch
