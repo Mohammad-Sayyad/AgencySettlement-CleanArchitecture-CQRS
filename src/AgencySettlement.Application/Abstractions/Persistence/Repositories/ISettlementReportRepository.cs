@@ -1,5 +1,6 @@
 ﻿using AgencySettlement.Application.Common;
 using AgencySettlement.Application.DTOs;
+using AgencySettlement.Application.DTOs.SingleLessonDto;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,7 +18,7 @@ namespace AgencySettlement.Application.Abstractions.Persistence.Repositories
         //   int pageNumber,
         //   int pageSize,
         //   CancellationToken cancellationToken);
-
+     
         Task<SettlementReportResponse> GetReportAsync(
     int? agencyId,
     int yearId,
@@ -27,11 +28,20 @@ namespace AgencySettlement.Application.Abstractions.Persistence.Repositories
     int pageSize,
     CancellationToken cancellationToken);
 
-        //    Task<List<SettlementDetailItemDto>> GetSettlementDetailsAsync(
+
+        //    Task<SettlementDetailsDto> GetSettlementDetailsAsync(
         //int agencyId,
         //int yearId,
         //string persianExecutionDate,
         //CancellationToken cancellationToken);
+
+       
+
+
+        Task<SettlementSelectionDetailsDto> GetSettlementSelectionDetailsAsync(
+     int agencyId,
+     long[] settlementIds,
+     CancellationToken cancellationToken);
 
         Task<SettlementDetailsDto> GetSettlementDetailsAsync(
     int agencyId,
@@ -39,10 +49,11 @@ namespace AgencySettlement.Application.Abstractions.Persistence.Repositories
     string persianExecutionDate,
     CancellationToken cancellationToken);
 
+        Task<CombinedSettlementDetailsDto> GetCombinedSettlementDetailsAsync(
+            int agencyId,
+            int yearId,
+            string persianExecutionDate,
+            CancellationToken cancellationToken);
 
-        Task<SettlementSelectionDetailsDto> GetSettlementSelectionDetailsAsync(
-     int agencyId,
-     long[] settlementIds,
-     CancellationToken cancellationToken);
     }
 }

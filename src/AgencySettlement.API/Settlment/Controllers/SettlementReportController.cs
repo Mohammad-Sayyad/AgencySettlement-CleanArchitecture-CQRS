@@ -1,4 +1,5 @@
-﻿using AgencySettlement.Application.Features.Queries.GetSettlementDetailsQuery;
+﻿using AgencySettlement.Application.DTOs.SingleLessonDto;
+using AgencySettlement.Application.Features.Queries.GetSettlementDetailsQuery;
 using AgencySettlement.Application.Features.Queries.GetSettlementFactorReportQuery;
 using AgencySettlement.Application.Features.Queries.GetSettlementSelectionDetailsQuery;
 using AgencySettlement.Application.Settlements.Queries.ReportQuery;
@@ -64,12 +65,30 @@ namespace AgencySettlement.API.Settlment.Controllers
             return Ok(result);
         }
 
+     //   [HttpGet("settlement/details")]
+     //   public async Task<IActionResult> GetSettlementDetails(
+     //[FromQuery] int agencyId,
+     //[FromQuery] int yearId,
+     //[FromQuery] string persianExecutionDate,
+     //CancellationToken cancellationToken)
+     //   {
+     //       var result = await _mediator.Send(
+     //           new GetSettlementDetailsQuery(
+     //               agencyId,
+     //               yearId,
+     //               persianExecutionDate),
+     //           cancellationToken);
+
+     //       return Ok(result);
+     //   }
+
+
         [HttpGet("settlement/details")]
-        public async Task<IActionResult> GetSettlementDetails(
-     [FromQuery] int agencyId,
-     [FromQuery] int yearId,
-     [FromQuery] string persianExecutionDate,
-     CancellationToken cancellationToken)
+        public async Task<ActionResult<CombinedSettlementDetailsDto>> GetSettlementDetails(
+            [FromQuery] int agencyId,
+            [FromQuery] int yearId,
+            [FromQuery] string persianExecutionDate,
+            CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(
                 new GetSettlementDetailsQuery(
@@ -80,6 +99,7 @@ namespace AgencySettlement.API.Settlment.Controllers
 
             return Ok(result);
         }
+
 
         [HttpGet("settlement/selection-details")]
         public async Task<IActionResult> GetSettlementSelectionDetails(

@@ -292,10 +292,18 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
 
             if (existingOrder is not null)
             {
+
+                //existingPaidAmount =
+                //    existingOrder.TotalCredit -
+                //    existingOrder.Items.Sum(
+                //        x => x.CreditAmount);
+
                 existingPaidAmount =
-                    existingOrder.TotalCredit -
-                    existingOrder.Items.Sum(
-                        x => x.CreditAmount);
+    existingOrder.TotalCredit -
+    existingOrder.Items
+        .Where(x => x.RegistrationPlanId != 8)
+        .Sum(x => x.CreditAmount);
+
 
                 if (existingPaidAmount < 0m)
                 {
@@ -405,15 +413,31 @@ namespace AgencySettlement.Application.Features.Commands.SettlementsMonthlyInser
                     continue;
                 }
 
-                totalDebit +=
-                    calculation.DebitAmount;
+                //totalDebit +=
+                //    calculation.DebitAmount;
 
-                totalCredit +=
-                    calculation.CreditAmount;
+                //totalCredit +=
+                //    calculation.CreditAmount;
 
-                totalCreditGaj +=
-                    calculation.TotalCreditGaj;
+                //totalCreditGaj +=
+                //    calculation.TotalCreditGaj;
 
+                //order.Items.Add(
+                //    CreateOrderItem(
+                //        groupData,
+                //        calculation,
+                //        agency));
+
+                // آیتم همه طرح‌ها، از جمله طرح ۸، حفظ می‌شود.
+                // فقط طرح ۸ وارد جمع‌های مالی عمومی نمی‌شود.
+                if (groupData.RegistrationPlanId != 8)
+                {
+                    totalDebit += calculation.DebitAmount;
+                    totalCredit += calculation.CreditAmount;
+                    totalCreditGaj += calculation.TotalCreditGaj;
+                }
+
+                // این بخش برای تمام طرح‌ها اجرا می‌شود؛ طرح ۸ هم حذف نمی‌شود.
                 order.Items.Add(
                     CreateOrderItem(
                         groupData,

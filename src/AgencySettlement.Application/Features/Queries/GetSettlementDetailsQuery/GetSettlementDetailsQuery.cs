@@ -1,4 +1,5 @@
 ﻿using AgencySettlement.Application.DTOs;
+using AgencySettlement.Application.DTOs.SingleLessonDto;
 using MediatR;
 using System;
 using System.Collections.Generic;
@@ -14,9 +15,9 @@ namespace AgencySettlement.Application.Features.Queries.GetSettlementDetailsQuer
     //string PersianExecutionDate)
     //: IRequest<SettlementDetailsDto>;
 
-    public sealed record GetSettlementDetailsQuery(
-    int AgencyId,
-    int YearId,
-    string PersianExecutionDate)
-    : IRequest<SettlementDetailsDto>;
+    public record GetSettlementDetailsQuery(
+     int AgencyId,
+     int YearId,
+     string PersianExecutionDate
+ ) : IRequest<CombinedSettlementDetailsDto>;
 }

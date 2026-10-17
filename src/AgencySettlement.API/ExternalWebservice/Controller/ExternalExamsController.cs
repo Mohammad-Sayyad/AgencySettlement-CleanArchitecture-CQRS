@@ -11,6 +11,7 @@ using AgencySettlement.Application.Settlements.Queries.DebtQuery;
 using AgencySettlement.Application.Settlements.Queries.PaymentQuery;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
 
 namespace AgencySettlement.API.ExteralWebService.Controller;
 
@@ -20,10 +21,12 @@ public sealed class ExternalExamsController : ControllerBase
 {
     private readonly ISender _sender;
     private readonly IMediator _mediator;
-    public ExternalExamsController(ISender sender, IMediator mediator)
+    private readonly ILogger<ExternalExamsController> _logger;
+    public ExternalExamsController(ISender sender, IMediator mediator, ILogger<ExternalExamsController> logger)
     {
         _sender = sender;
         _mediator = mediator;
+        _logger = logger;
     }
 
     [HttpPost("import")]
@@ -178,9 +181,13 @@ public sealed class ExternalExamsController : ControllerBase
     [FromBody] ImportSingleLessonRequest request,
     CancellationToken cancellationToken)
     {
+
+        var sw = Stopwatch.StartNew();
         var result = await _sender.Send(
             new ImportSingleLessonsCommand(request),
             cancellationToken);
+
+       
 
         return Ok(new
         {
