@@ -949,142 +949,286 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
 
 
         public async Task<CombinedSettlementDetailsDto> GetCombinedSettlementDetailsAsync(
-            int agencyId,
-            int yearId,
-            string persianExecutionDate,
-            CancellationToken cancellationToken)
+     int agencyId,
+     int yearId,
+     string persianExecutionDate,
+     CancellationToken cancellationToken)
         {
+            // =========================================
+            // 1. گزارش آزمون
+            // =========================================
+
             var exam = await GetSettlementDetailsAsync(
                 agencyId,
                 yearId,
                 persianExecutionDate,
                 cancellationToken);
 
+            // =========================================
+            // 2. دریافت رکوردهای تک‌درس
+            // =========================================
+
             var rawItems = await (
                 from item in _context.SingleLessonSettlementItems.AsNoTracking()
+
                 join input in _context.SingleLessonExternalInputs.AsNoTracking()
                     on item.ExternalInputId equals input.Id
+
                 join package in _context.Packages.AsNoTracking()
                     on item.PackageId equals package.Id
+
                 join level in _context.EducationalLevels.AsNoTracking()
                     on item.EducationalLevelId equals level.Id
+
                 join field in _context.StudyFields.AsNoTracking()
                     on item.StudyFieldId equals field.Id
+
                 join mode in _context.ExamModes.AsNoTracking()
                     on item.ExamModeId equals mode.Id
+
                 join plan in _context.RegistrationPlans.AsNoTracking()
                     on item.RegistrationPlanId equals plan.Id
-                   join singleLessons in _context.SingleLessons.AsNoTracking()
-                   on item.CourseId equals singleLessons.CourseId 
+
+                // اتصال صحیح تعریف درس بر اساس تمام ابعاد آن
+                join course in _context.SingleLessons.AsNoTracking()
+                    on new
+                    {
+                        item.CourseId,
+                        item.YearId,
+                        item.StudyFieldId,
+                        item.EducationalLevelId,
+                        item.PackageId
+                    }
+                    equals new
+                    {
+                        course.CourseId,
+                        course.YearId,
+                        course.StudyFieldId,
+                        course.EducationalLevelId,
+                        course.PackageId
+                    }
+
                 where item.AgencyId == agencyId
                       && item.YearId == yearId
                       && item.PersianExecutionDate == persianExecutionDate
+
                 select new
                 {
                     item.CourseId,
-                    singleLessons.CourseName,
-                    item.EducationalLevelId,
-                    EducationalLevelName = level.Name,
-                    item.StudyFieldId,
-                    StudyFieldName = field.Name,
+                    CourseName = course.CourseName,
+
+                    item.YearId,
+                    item.PersianExecutionDate,
+
                     item.PackageId,
                     PackageName = package.Name,
+
+                    item.EducationalLevelId,
+                    EducationalLevelName = level.Name,
+
+                    item.StudyFieldId,
+                    StudyFieldName = field.Name,
+
                     item.ExamModeId,
                     ExamModeName = mode.Name,
+
                     item.RegistrationPlanId,
                     RegistrationPlanName = plan.Name,
+
                     input.CandidateExamId,
+
                     item.Quantity,
+                    item.UnitPrice,
+                    item.BaseAmount,
+
+                    item.AgencyPercent,
+                    item.GajPercent,
+
+                    item.AgencyAmount,
+                    item.GajAmount,
+
                     item.DebitAmount,
                     item.CreditAmount
                 })
                 .ToListAsync(cancellationToken);
 
+            // =========================================
+            // 3. تجمیع رکوردهای مشابه
+            // =========================================
+
             var singleLessonItems = rawItems
                 .GroupBy(x => new
                 {
                     x.CourseId,
-                    x.EducationalLevelId,
-                    x.EducationalLevelName,
-                    x.StudyFieldId,
-                    x.StudyFieldName,
+                    x.CourseName,
+
                     x.PackageId,
                     x.PackageName,
-                    x.CourseName,
+
+                    x.EducationalLevelId,
+                    x.EducationalLevelName,
+
+                    x.StudyFieldId,
+                    x.StudyFieldName,
+
                     x.ExamModeId,
                     x.ExamModeName,
+
                     x.RegistrationPlanId,
                     x.RegistrationPlanName
                 })
-                .Select(g =>
+                .Select(g => new SingleLessonReportItemDto
                 {
-                    var totalDebit = g.Sum(x => x.DebitAmount);
-                    var totalCredit = g.Sum(x => x.CreditAmount);
+                    CourseId = g.Key.CourseId,
+                    CourseName = g.Key.CourseName,
 
-                    return new SingleLessonReportItemDto
-                    {
-                        CourseId = g.Key.CourseId,
+                    PackageId = g.Key.PackageId,
+                    PackageName = g.Key.PackageName,
 
-                        EducationalLevelId = g.Key.EducationalLevelId,
-                        EducationalLevelName = g.Key.EducationalLevelName,
+                    EducationalLevelId = g.Key.EducationalLevelId,
+                    EducationalLevelName = g.Key.EducationalLevelName,
 
-                        StudyFieldId = g.Key.StudyFieldId,
-                        StudyFieldName = g.Key.StudyFieldName,
+                    StudyFieldId = g.Key.StudyFieldId,
+                    StudyFieldName = g.Key.StudyFieldName,
 
-                        PackageId = g.Key.PackageId,
-                        PackageName = g.Key.PackageName,
-                        CourseName = g.Key.CourseName,
-                        ExamModeId = g.Key.ExamModeId,
-                        ExamModeName = g.Key.ExamModeName,
+                    ExamModeId = g.Key.ExamModeId,
+                    ExamModeName = g.Key.ExamModeName,
 
-                        RegistrationPlanId = g.Key.RegistrationPlanId,
-                        RegistrationPlanName = g.Key.RegistrationPlanName,
+                    RegistrationPlanId = g.Key.RegistrationPlanId,
+                    RegistrationPlanName = g.Key.RegistrationPlanName,
 
-                        SingleLessonCandidateCount = g
-                            .Select(x => x.CandidateExamId)
-                            .Distinct()
-                            .Count(),
+                    // تعداد دانش‌آموز یکتا در این گروه
+                    SingleLessonCandidateCount = g
+                        .Select(x => x.CandidateExamId)
+                        .Distinct()
+                        .Count(),
 
-                        SingleLessonQuantity = g.Sum(x => x.Quantity),
+                    // تعداد کل درس
+                    SingleLessonQuantity = g.Sum(x => x.Quantity),
 
-                        SingleLessonTotalDebit = totalDebit,
-                        SingleLessonTotalCredit = totalCredit,
-                        SingleLessonBalance = totalDebit - totalCredit
-                    };
+                    // مبالغ تجمیعی
+                    UnitPrice = g.First().UnitPrice,
+                    BaseAmount = g.Sum(x => x.BaseAmount),
+
+                    AgencyPercent = g.First().AgencyPercent,
+                    GajPercent = g.First().GajPercent,
+
+                    AgencyAmount = g.Sum(x => x.AgencyAmount),
+                    GajAmount = g.Sum(x => x.GajAmount),
+
+                    SingleLessonTotalDebit = g.Sum(x => x.DebitAmount),
+                    SingleLessonTotalCredit = g.Sum(x => x.CreditAmount),
+
+                    SingleLessonBalance =
+                        g.Sum(x => x.DebitAmount) -
+                        g.Sum(x => x.CreditAmount),
+
+                    StageTypeId = GetStageTypeId(g.Key.EducationalLevelId),
+                    StageTypeName = GetStageTypeName(g.Key.EducationalLevelId)
                 })
                 .OrderBy(x => x.PackageId)
+                .ThenBy(x => x.StageTypeId)
                 .ThenBy(x => x.EducationalLevelId)
                 .ThenBy(x => x.StudyFieldId)
+                .ThenBy(x => x.ExamModeId)
+                .ThenBy(x => x.RegistrationPlanId)
                 .ThenBy(x => x.CourseId)
                 .ToList();
 
-            // طرح ۸ نمایش داده می‌شود، اما در جمع مالی وارد نمی‌شود.
+            // =========================================
+            // 4. عنوان هر ردیف
+            // =========================================
+
+            // =========================================
+            // 5. جمع مالی
+            // طرح 8 در جزئیات نمایش داده می‌شود،
+            // ولی وارد جمع مالی نمی‌شود.
+            // =========================================
+
             var financialItems = singleLessonItems
                 .Where(x => x.RegistrationPlanId != 8)
                 .ToList();
 
-            var singleLessonTotalDebit = financialItems
+            var totalDebit = financialItems
                 .Sum(x => x.SingleLessonTotalDebit);
 
-            var singleLessonTotalCredit = financialItems
+            var totalCredit = financialItems
                 .Sum(x => x.SingleLessonTotalCredit);
+
+            var totalBaseAmount = financialItems
+                .Sum(x => x.BaseAmount);
+
+            var totalAgencyAmount = financialItems
+                .Sum(x => x.AgencyAmount);
+
+            var totalGajAmount = financialItems
+                .Sum(x => x.GajAmount);
+
+            // تعداد کل درس‌ها، نه تعداد دانش‌آموزان
+            var totalQuantity = financialItems
+                .Sum(x => x.SingleLessonQuantity);
+
+            // تعداد دانش‌آموزان یکتای کل گزارش
+            var totalCandidateCount = financialItems
+                .SelectMany(group => rawItems
+                    .Where(x =>
+                        x.CourseId == group.CourseId &&
+                        x.PackageId == group.PackageId &&
+                        x.EducationalLevelId == group.EducationalLevelId &&
+                        x.StudyFieldId == group.StudyFieldId &&
+                        x.ExamModeId == group.ExamModeId &&
+                        x.RegistrationPlanId == group.RegistrationPlanId)
+                    .Select(x => x.CandidateExamId))
+                .Distinct()
+                .Count();
+
+            // =========================================
+            // 6. اطلاعات تسویه تک‌درس
+            // =========================================
+
+            var settlementInfo = await _context.SingleLessonSettlements
+                .AsNoTracking()
+                .Where(x =>
+                    x.AgencyId == agencyId &&
+                    x.YearId == yearId &&
+                    x.PersianExecutionDate == persianExecutionDate)
+                .Select(x => new
+                {
+                    x.TotalCredit,
+                    x.Balance
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            // =========================================
+            // 7. DTO نهایی تک‌درس
+            // =========================================
 
             var singleLesson = new SingleLessonReportDto
             {
                 Items = singleLessonItems,
 
-                SingleLessonTotalDebit = singleLessonTotalDebit,
-                SingleLessonTotalCredit = singleLessonTotalCredit,
+                SingleLessonTotalDebit = totalDebit,
+                SingleLessonTotalCredit = totalCredit,
 
-                // مانده منفی مجاز است.
-                SingleLessonBalance =
-                    singleLessonTotalDebit - singleLessonTotalCredit,
+                // مانده محاسباتی ردیف‌ها
+                SingleLessonBalance = totalDebit - totalCredit,
 
-                SingleLessonTotalCourseCount = rawItems
-    .Select(x => x.CandidateExamId)
-    .Distinct()
-    .Count()
+                SingleLessonTotalCourseCount = totalQuantity,
+
+                TotalCandidateCount = totalCandidateCount,
+
+                TotalBaseAmount = totalBaseAmount,
+                TotalAgencyAmount = totalAgencyAmount,
+                TotalGajAmount = totalGajAmount,
+
+                // مقادیر ثبت‌شده در جدول تسویه
+                SettlementTotalCredit = settlementInfo?.TotalCredit ?? 0,
+                SettlementBalance = settlementInfo?.Balance ?? 0
             };
+
+            // =========================================
+            // 8. خروجی ترکیبی
+            // =========================================
 
             return new CombinedSettlementDetailsDto
             {
@@ -1092,8 +1236,6 @@ namespace AgencySettlement.Infrastructure.Persistence.Repositories
                 SingleLesson = singleLesson
             };
         }
-
-
 
         //public async Task<SettlementDetailsDto> GetSettlementDetailsAsync(
         //    int agencyId,

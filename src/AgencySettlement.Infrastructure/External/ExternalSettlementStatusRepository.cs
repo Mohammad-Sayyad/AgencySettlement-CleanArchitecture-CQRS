@@ -1,6 +1,7 @@
 ﻿using AgencySettlement.Application.Abstractions.External;
 using AgencySettlement.Application.DTOs;
 using AgencySettlement.Application.DTOs.ExternalDtos;
+using AgencySettlement.Application.DTOs.SingleLessonDto;
 using AgencySettlement.Domain.Entities;
 using AgencySettlement.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -19,12 +20,17 @@ public sealed class ExternalSettlementStatusRepository
         _context = context;
     }
 
+
     public async Task<ExternalSettlementStatusDto?> GetExternalSettlementStatusAsync(
     int agencyId,
     int yearId,
     string persianExecutionDate,
     CancellationToken cancellationToken)
     {
+        // -----------------------------------------
+        // Exam settlement
+        // -----------------------------------------
+
         var settlement = await _context.Settlements
             .AsNoTracking()
             .Where(x =>
@@ -43,14 +49,34 @@ public sealed class ExternalSettlementStatusRepository
             })
             .FirstOrDefaultAsync(cancellationToken);
 
-        var databaseName = _context.Database.GetDbConnection().Database;
-        var serverName = _context.Database.GetDbConnection().DataSource;
+        // -----------------------------------------
+        // Single lesson settlement
+        // -----------------------------------------
 
-        if (settlement == null)
+        var singleLessonSettlement =
+            await _context.SingleLessonSettlements
+                .AsNoTracking()
+                .Where(x =>
+                    x.AgencyId == agencyId &&
+                    x.YearId == yearId &&
+                    x.PersianExecutionDate == persianExecutionDate)
+                .OrderByDescending(x => x.Id)
+                .Select(x => new
+                {
+                    x.Id,
+                    x.TotalDebit,
+                    x.TotalCourseCount
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+
+        // اگر هیچ‌کدام از تسویه‌ها وجود نداشته باشند،
+        // وضعیت تسویه‌ای برای برگرداندن نداریم.
+        if (settlement == null && singleLessonSettlement == null)
             return null;
 
         // -----------------------------------------
-        // Items
+        // Exam items
+        // منطق و محاسبات قبلی آزمون حفظ شده است.
         // -----------------------------------------
 
         var items = await (
@@ -91,7 +117,6 @@ public sealed class ExternalSettlementStatusRepository
             select new SettlementDetailItemDto
             {
                 SettlementItemId = item.Id,
-
                 SettlementId = order.Id,
 
                 PackageId = item.PackageId,
@@ -123,9 +148,7 @@ public sealed class ExternalSettlementStatusRepository
                 DiscountPercent = item.GajPercent,
 
                 DiscountAmount =
-                    item.BaseAmount *
-                    item.GajPercent /
-                    100m,
+                    item.BaseAmount * item.GajPercent / 100m,
 
                 AgencyPercent = item.AgencyPercent,
 
@@ -138,14 +161,11 @@ public sealed class ExternalSettlementStatusRepository
 
                 TotalAmount =
                     item.BaseAmount -
-                    (
-                        item.BaseAmount *
-                        item.GajPercent /
-                        100m
-                    )
+                    (item.BaseAmount * item.GajPercent / 100m)
             }
         ).ToListAsync(cancellationToken);
 
+        // همان محاسبه قبلی عنوان ردیف‌های آزمون
         foreach (var item in items)
         {
             item.StageTypeId =
@@ -161,6 +181,7 @@ public sealed class ExternalSettlementStatusRepository
                 $"رشته {item.StudyFieldName}";
         }
 
+        // همان تعدادهای قبلی آزمون؛ تغییری در منطق نیست.
         var totalInPersonCount = items
             .Where(x => x.ExamModeId == 0)
             .Sum(x => x.CandidateCount);
@@ -169,7 +190,107 @@ public sealed class ExternalSettlementStatusRepository
             .Where(x => x.ExamModeId == 1)
             .Sum(x => x.CandidateCount);
 
-        var paymentStartDate = settlement.PersianExecutionDate;
+        // -----------------------------------------
+        // Single lesson items
+        // -----------------------------------------
+
+        var singleLessonItems = await (
+            from item in _context.SingleLessonSettlementItems.AsNoTracking()
+
+            join package in _context.Packages.AsNoTracking()
+                on item.PackageId equals package.Id
+
+            join educationalLevel in _context.EducationalLevels.AsNoTracking()
+                on item.EducationalLevelId equals educationalLevel.Id
+
+            join studyField in _context.StudyFields.AsNoTracking()
+                on item.StudyFieldId equals studyField.Id
+
+            join examMode in _context.ExamModes.AsNoTracking()
+                on item.ExamModeId equals examMode.Id
+
+            join registrationPlan in _context.RegistrationPlans.AsNoTracking()
+                on item.RegistrationPlanId equals registrationPlan.Id
+
+            where item.AgencyId == agencyId
+                  && item.YearId == yearId
+                  && item.PersianExecutionDate == persianExecutionDate
+
+            orderby item.EducationalLevelId,
+                    item.StudyFieldId,
+                    item.CourseId
+
+            select new SingleLessonSettlementDetailItemDto
+            {
+                Id = item.Id,
+                SettlementId = item.SettlementId,
+
+                CourseId = item.CourseId,
+
+                // Subquery برای جلوگیری از تکثیر ردیف‌ها
+                // در صورت وجود چند رکورد همسان در SingleLessons
+                CourseName = _context.SingleLessons
+                    .Where(course =>
+                        course.YearId == item.YearId &&
+                        course.CourseId == item.CourseId &&
+                        course.StudyFieldId == item.StudyFieldId &&
+                        course.EducationalLevelId == item.EducationalLevelId &&
+                        course.PackageId == item.PackageId)
+                    .Select(course => course.CourseName)
+                    .FirstOrDefault() ?? string.Empty,
+
+                PackageId = item.PackageId,
+                PackageName = package.Name,
+
+                EducationalLevelId = item.EducationalLevelId,
+                EducationalLevelName = educationalLevel.Name,
+
+                StudyFieldId = item.StudyFieldId,
+                StudyFieldName = studyField.Name,
+
+                ExamModeId = item.ExamModeId,
+                ExamModeName = examMode.Name,
+
+                RegistrationPlanId = item.RegistrationPlanId,
+                RegistrationPlanName = registrationPlan.Name,
+
+                Quantity = item.Quantity,
+
+                UnitPrice = item.UnitPrice,
+                BaseAmount = item.BaseAmount,
+
+                AgencyPercent = item.AgencyPercent,
+                GajPercent = item.GajPercent,
+
+                AgencyAmount = item.AgencyAmount,
+                GajAmount = item.GajAmount,
+
+                DebitAmount = item.DebitAmount
+            }
+        ).ToListAsync(cancellationToken);
+
+        // -----------------------------------------
+        // Debt summaries
+        // -----------------------------------------
+
+        var examTotalDebit = settlement?.TotalDebit ?? 0m;
+
+        var singleLessonTotalDebit =
+            singleLessonSettlement?.TotalDebit ?? 0m;
+
+        var totalDebit =
+            examTotalDebit + singleLessonTotalDebit;
+
+        // تعداد تک‌درس از ردیف‌های واقعی محاسبه می‌شود.
+        var singleLessonTotalCourseCount =
+            singleLessonItems.Sum(x => x.Quantity);
+
+        // -----------------------------------------
+        // Payment status
+        // -----------------------------------------
+
+        var paymentStartDate =
+            settlement?.PersianExecutionDate ?? persianExecutionDate;
 
         var paymentDeadlineDate = AddDays(
             paymentStartDate,
@@ -179,32 +300,50 @@ public sealed class ExternalSettlementStatusRepository
             paymentStartDate,
             paymentDeadlineDate);
 
+        // -----------------------------------------
+        // Response
+        // -----------------------------------------
+
         return new ExternalSettlementStatusDto
         {
-            AgencyId = settlement.AgencyId,
-            YearId = settlement.YearId,
-            SettlmentId = settlement.Id,
+            AgencyId = agencyId,
+            YearId = yearId,
+
+            SettlmentId = settlement?.Id ?? 0L,
+
+            SingleLessonSettlementId =
+                singleLessonSettlement?.Id,
 
             PersianExecutionDate = paymentStartDate,
             PaymentDeadline = paymentDeadlineDate,
             PaymentStatus = paymentStatus,
 
-            // DebtAmount = settlement.TotalDebit,
-            Balance = settlement.Balance,
+            // فیلد قدیمی؛ مقدار آزمون حفظ می‌شود.
+            Balance = settlement?.Balance ?? 0m,
 
+            // جزئیات آزمون
             Items = items,
-
             TotalInPersonCount = totalInPersonCount,
+            TotalOnlineCount = totalOnlineCount,
 
-            TotalOnlineCount = totalOnlineCount
+            // جزئیات تک‌درس
+            SingleLessonItems = singleLessonItems,
+
+            // فقط بدهکاری‌ها
+            ExamTotalDebit = examTotalDebit,
+            SingleLessonTotalDebit = singleLessonTotalDebit,
+            TotalDebit = totalDebit,
+
+            // تعداد تک‌درس
+            SingleLessonTotalCourseCount =
+                singleLessonTotalCourseCount
         };
     }
-
     //public async Task<ExternalSettlementStatusDto?> GetExternalSettlementStatusAsync(
-    //    int agencyId,
-    //    int yearId,
-    //    string persianExecutionDate,
-    //    CancellationToken cancellationToken)
+    //int agencyId,
+    //int yearId,
+    //string persianExecutionDate,
+    //CancellationToken cancellationToken)
     //{
     //    var settlement = await _context.Settlements
     //        .AsNoTracking()
@@ -215,7 +354,6 @@ public sealed class ExternalSettlementStatusRepository
     //        .OrderByDescending(x => x.Id)
     //        .Select(x => new
     //        {
-
     //            x.Id,
     //            x.AgencyId,
     //            x.Balance,
@@ -225,13 +363,131 @@ public sealed class ExternalSettlementStatusRepository
     //        })
     //        .FirstOrDefaultAsync(cancellationToken);
 
-
     //    var databaseName = _context.Database.GetDbConnection().Database;
     //    var serverName = _context.Database.GetDbConnection().DataSource;
 
-
     //    if (settlement == null)
     //        return null;
+
+    //    // -----------------------------------------
+    //    // Items
+    //    // -----------------------------------------
+
+    //    var items = await (
+    //        from item in _context.SettlementOrderItems.AsNoTracking()
+
+    //        join order in _context.SettlementOrders.AsNoTracking()
+    //            on item.SettlementOrderId equals order.Id
+
+    //        join package in _context.Packages.AsNoTracking()
+    //            on item.PackageId equals package.Id
+
+    //        join educationalLevel in _context.EducationalLevels.AsNoTracking()
+    //            on item.EducationalLevelId equals educationalLevel.Id
+
+    //        join studyField in _context.StudyFields.AsNoTracking()
+    //            on item.StudyFieldId equals studyField.Id
+
+    //        join examMode in _context.ExamModes.AsNoTracking()
+    //            on item.ExamModeId equals examMode.Id
+
+    //        join agency in _context.Agencies.AsNoTracking()
+    //            on item.AgencyId equals agency.Id
+
+    //        join yearType in _context.YearTypes.AsNoTracking()
+    //            on item.YearId equals yearType.Id
+
+    //        join registrationPlan in _context.RegistrationPlans.AsNoTracking()
+    //            on item.RegistrationPlanId equals registrationPlan.Id
+
+    //        where item.AgencyId == agencyId
+    //              && item.YearId == yearId
+    //              && item.PersianExecutionDate == persianExecutionDate
+
+    //        orderby item.ExamModeId,
+    //                item.EducationalLevelId,
+    //                item.StudyFieldId
+
+    //        select new SettlementDetailItemDto
+    //        {
+    //            SettlementItemId = item.Id,
+
+    //            SettlementId = order.Id,
+
+    //            PackageId = item.PackageId,
+    //            PackageName = package.Name,
+
+    //            ExamModeId = item.ExamModeId,
+    //            ExamModeName = examMode.Name,
+
+    //            AgencyName = agency.Name,
+    //            YearName = yearType.Name,
+    //            DetailCode = agency.DetailCode,
+
+    //            EducationalLevelId = item.EducationalLevelId,
+    //            EducationalLevelName = educationalLevel.Name,
+
+    //            RegistrationPlanId = item.RegistrationPlanId,
+    //            RegistrationPlanName = registrationPlan.Name,
+
+    //            StudyFieldId = item.StudyFieldId,
+    //            StudyFieldName = studyField.Name,
+
+    //            CandidateCount = item.CandidateCount,
+    //            FreeCandidateCount = item.FreeCandidateCount,
+    //            PaidCandidateCount = item.PaidCandidateCount,
+
+    //            UnitPrice = item.UnitPrice,
+    //            BaseAmount = item.BaseAmount,
+
+    //            DiscountPercent = item.GajPercent,
+
+    //            DiscountAmount =
+    //                item.BaseAmount *
+    //                item.GajPercent /
+    //                100m,
+
+    //            AgencyPercent = item.AgencyPercent,
+
+    //            AgencyAmount = item.AgencyAmount,
+    //            GajAmount = item.GajAmount,
+    //            StudentAmount = item.StudentAmount,
+
+    //            DebitAmount = item.DebitAmount,
+    //            CreditAmount = item.CreditAmount,
+
+    //            TotalAmount =
+    //                item.BaseAmount -
+    //                (
+    //                    item.BaseAmount *
+    //                    item.GajPercent /
+    //                    100m
+    //                )
+    //        }
+    //    ).ToListAsync(cancellationToken);
+
+    //    foreach (var item in items)
+    //    {
+    //        item.StageTypeId =
+    //            GetStageTypeId(item.EducationalLevelId);
+
+    //        item.StageTypeName =
+    //            GetStageTypeName(item.EducationalLevelId);
+
+    //        item.Title =
+    //            $"{item.ExamModeName} - " +
+    //            $"{item.StageTypeName} - " +
+    //            $"پایه {item.EducationalLevelName} - " +
+    //            $"رشته {item.StudyFieldName}";
+    //    }
+
+    //    var totalInPersonCount = items
+    //        .Where(x => x.ExamModeId == 0)
+    //        .Sum(x => x.CandidateCount);
+
+    //    var totalOnlineCount = items
+    //        .Where(x => x.ExamModeId == 1)
+    //        .Sum(x => x.CandidateCount);
 
     //    var paymentStartDate = settlement.PersianExecutionDate;
 
@@ -248,14 +504,22 @@ public sealed class ExternalSettlementStatusRepository
     //        AgencyId = settlement.AgencyId,
     //        YearId = settlement.YearId,
     //        SettlmentId = settlement.Id,
+
     //        PersianExecutionDate = paymentStartDate,
     //        PaymentDeadline = paymentDeadlineDate,
     //        PaymentStatus = paymentStatus,
-    //       // DebtAmount = settlement.TotalDebit,
-    //        Balance = settlement.Balance
+
+    //        // DebtAmount = settlement.TotalDebit,
+    //        Balance = settlement.Balance,
+
+    //        Items = items,
+
+    //        TotalInPersonCount = totalInPersonCount,
+
+    //        TotalOnlineCount = totalOnlineCount
     //    };
     //}
-    //
+
 
     private static int GetStageTypeId(int educationalLevelId)
        => educationalLevelId switch

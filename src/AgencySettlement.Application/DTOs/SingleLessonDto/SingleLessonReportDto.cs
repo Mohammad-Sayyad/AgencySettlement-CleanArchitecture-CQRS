@@ -17,5 +17,14 @@ namespace AgencySettlement.Application.DTOs.SingleLessonDto
         public decimal SingleLessonBalance { get; set; }
 
         public int SingleLessonTotalCourseCount { get; set; }
+
+        public int TotalCandidateCount { get; set; }
+
+        public decimal TotalBaseAmount { get; set; }
+        public decimal TotalAgencyAmount { get; set; }
+        public decimal TotalGajAmount { get; set; }
+
+        public decimal SettlementTotalCredit { get; set; }
+        public decimal SettlementBalance { get; set; }
     }
 }

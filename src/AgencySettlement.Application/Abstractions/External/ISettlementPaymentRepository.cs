@@ -15,9 +15,9 @@ namespace AgencySettlement.Application.Abstractions.External
             string persianExecutionDate,
             CancellationToken cancellationToken);
 
-        Task AddSettlementPaymentAsync(
-    SettlementPayment payment,
-    CancellationToken cancellationToken);
+        Task<long> AddSettlementPaymentAsync(
+          SettlementPayment payment,
+          CancellationToken cancellationToken);
 
         Task<Settlement?> GetSettlementByIdAsync(
             long settlementId,
