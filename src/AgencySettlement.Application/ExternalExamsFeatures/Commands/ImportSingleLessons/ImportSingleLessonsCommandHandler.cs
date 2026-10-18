@@ -108,6 +108,8 @@ public sealed class ImportSingleLessonsCommandHandler
         _unitOfWork = unitOfWork;
     }
 
+
+
     public async Task<ImportExamResult> Handle(
         ImportSingleLessonsCommand request,
         CancellationToken cancellationToken)
@@ -117,20 +119,9 @@ public sealed class ImportSingleLessonsCommandHandler
         var record = request.Record;
         var totalReceived = record.Items.Count;
 
-        // فقط یک بار گروه‌بندی می‌کنیم.
-        var groupedItems = record.Items
-            .GroupBy(x => x.CandidateExamId)
-            .ToList();
-
-        var duplicateInRequestCount =
-            totalReceived - groupedItems.Count;
-
-        var items = groupedItems
-            .Select(g => g.First())
-            .ToList();
-
-        var ids = items
+        var ids = record.Items
             .Select(x => x.CandidateExamId)
+            .Distinct()
             .ToList();
 
         await _unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -142,116 +133,65 @@ public sealed class ImportSingleLessonsCommandHandler
                     ids,
                     cancellationToken);
 
-            var existingById = existingRecords.ToDictionary(
-                x => x.CandidateExamId);
+            var existingKeys = existingRecords
+                .Select(x => (
+                    x.CandidateExamId,
+                    x.CourseId,
+                    x.EducationalLevelId,
+                    x.StudyFieldId,
+                    x.RegistrationPlanId,
+                    x.PackageId,
+                    x.ExamModeId,
+                    x.AgencyId,
+                    x.YearId,
+                    x.PersianExecutionDate))
+                .ToHashSet();
 
-            var affected = new HashSet<SingleLessonSettlementGroup>();
             var newRecords = new List<SingleLessonExternalInput>();
-            var histories = new List<SingleLessonExternalInputHistory>();
+            var affected = new HashSet<SingleLessonSettlementGroup>();
+            var duplicateRecords = 0;
 
-            foreach (var item in items)
+            foreach (var item in record.Items)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                if (existingById.TryGetValue(
+                var key = (
                     item.CandidateExamId,
-                    out var existing))
+                    item.CourseId,
+                    item.EducationalLevelId,
+                    item.StudyFieldId,
+                    item.RegistrationPlanId,
+                    item.PackageId,
+                    item.ExamModeId,
+                    record.AgencyId,
+                    record.YearId,
+                    record.PersianExecutionDate);
+
+                if (!existingKeys.Add(key))
                 {
-                    affected.Add(new(
-                        existing.AgencyId,
-                        existing.YearId,
-                        existing.PersianExecutionDate));
-
-                    var changes = new List<string>();
-
-                    AddChange(changes, nameof(existing.CourseId),
-                        existing.CourseId, item.CourseId);
-                    AddChange(changes, nameof(existing.PackageId),
-                        existing.PackageId, item.PackageId);
-                    AddChange(changes, nameof(existing.EducationalLevelId),
-                        existing.EducationalLevelId, item.EducationalLevelId);
-                    AddChange(changes, nameof(existing.ExamModeId),
-                        existing.ExamModeId, item.ExamModeId);
-                    AddChange(changes, nameof(existing.StudyFieldId),
-                        existing.StudyFieldId, item.StudyFieldId);
-                    AddChange(changes, nameof(existing.RegistrationPlanId),
-                        existing.RegistrationPlanId, item.RegistrationPlanId);
-                    AddChange(changes, nameof(existing.AgencyId),
-                        existing.AgencyId, record.AgencyId);
-                    AddChange(changes, nameof(existing.YearId),
-                        existing.YearId, record.YearId);
-                    AddChange(changes, nameof(existing.PersianExecutionDate),
-                        existing.PersianExecutionDate,
-                        record.PersianExecutionDate);
-
-                    if (changes.Count > 0)
-                    {
-                        histories.Add(new SingleLessonExternalInputHistory
-                        {
-                            ExternalInputId = existing.Id,
-                            CandidateExamId = existing.CandidateExamId,
-                            CourseId = existing.CourseId,
-                            PackageId = existing.PackageId,
-                            EducationalLevelId = existing.EducationalLevelId,
-                            ExamModeId = existing.ExamModeId,
-                            StudyFieldId = existing.StudyFieldId,
-                            RegistrationPlanId = existing.RegistrationPlanId,
-                            AgencyId = existing.AgencyId,
-                            YearId = existing.YearId,
-                            PersianExecutionDate = existing.PersianExecutionDate,
-                            RegistrationOrder = existing.RegistrationOrder,
-                            PersianReceivedDate = existing.PersianReceivedDate,
-                            Description = string.Join(" ", changes),
-                            ChangedAt = DateTime.UtcNow
-                        });
-                    }
-
-                    existing.CourseId = item.CourseId;
-                    existing.PackageId = item.PackageId;
-                    existing.EducationalLevelId = item.EducationalLevelId;
-                    existing.ExamModeId = item.ExamModeId;
-                    existing.StudyFieldId = item.StudyFieldId;
-                    existing.RegistrationPlanId = item.RegistrationPlanId;
-                    existing.AgencyId = record.AgencyId;
-                    existing.YearId = record.YearId;
-                    existing.PersianExecutionDate = record.PersianExecutionDate;
-
-                    affected.Add(new(
-                        existing.AgencyId,
-                        existing.YearId,
-                        existing.PersianExecutionDate));
+                    duplicateRecords++;
+                    continue;
                 }
-                else
+
+                newRecords.Add(new SingleLessonExternalInput
                 {
-                    var added = new SingleLessonExternalInput
-                    {
-                        CandidateExamId = item.CandidateExamId,
-                        CourseId = item.CourseId,
-                        PackageId = item.PackageId,
-                        EducationalLevelId = item.EducationalLevelId,
-                        ExamModeId = item.ExamModeId,
-                        StudyFieldId = item.StudyFieldId,
-                        RegistrationPlanId = item.RegistrationPlanId,
-                        AgencyId = record.AgencyId,
-                        YearId = record.YearId,
-                        PersianExecutionDate = record.PersianExecutionDate,
-                        CreatedAt = DateTime.UtcNow
-                    };
+                    CandidateExamId = item.CandidateExamId,
+                    CourseId = item.CourseId,
+                    EducationalLevelId = item.EducationalLevelId,
+                    StudyFieldId = item.StudyFieldId,
+                    RegistrationPlanId = item.RegistrationPlanId,
+                    PackageId = item.PackageId,
+                    ExamModeId = item.ExamModeId,
+                    AgencyId = record.AgencyId,
+                    YearId = record.YearId,
+                    PersianExecutionDate = record.PersianExecutionDate,
+                    CreatedAt = DateTime.UtcNow
+                });
 
-                    newRecords.Add(added);
-
-                    affected.Add(new(
-                        record.AgencyId,
-                        record.YearId,
-                        record.PersianExecutionDate));
-                }
-            }
-
-            if (histories.Count > 0)
-            {
-                await _repository.AddHistoryRangeAsync(
-                    histories,
-                    cancellationToken);
+                affected.Add(new(
+                    record.AgencyId,
+                    record.YearId,
+                    record.PersianExecutionDate));
             }
 
             if (newRecords.Count > 0)
@@ -259,13 +199,13 @@ public sealed class ImportSingleLessonsCommandHandler
                 await _repository.AddRangeAsync(
                     newRecords,
                     cancellationToken);
+
+                await _repository.SaveChangesAsync(cancellationToken);
+
+                await _settlements.RecalculateAsync(
+                    affected,
+                    cancellationToken);
             }
-
-            await _repository.SaveChangesAsync(cancellationToken);
-
-            await _settlements.RecalculateAsync(
-                affected,
-                cancellationToken);
 
             await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
@@ -273,8 +213,7 @@ public sealed class ImportSingleLessonsCommandHandler
             {
                 TotalReceived = totalReceived,
                 NewRecords = newRecords.Count,
-                DuplicateRecords =
-                    existingRecords.Count + duplicateInRequestCount
+                DuplicateRecords = duplicateRecords
             };
         }
         catch
@@ -283,6 +222,7 @@ public sealed class ImportSingleLessonsCommandHandler
             throw;
         }
     }
+
 
     private static void AddChange<T>(
         List<string> changes,

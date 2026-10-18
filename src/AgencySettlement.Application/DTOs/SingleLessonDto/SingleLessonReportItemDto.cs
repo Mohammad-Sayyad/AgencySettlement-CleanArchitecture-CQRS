@@ -31,5 +31,17 @@ namespace AgencySettlement.Application.DTOs.SingleLessonDto
         public decimal SingleLessonTotalDebit { get; set; }
         public decimal SingleLessonTotalCredit { get; set; }
         public decimal SingleLessonBalance { get; set; }
+
+        public decimal UnitPrice { get; set; }
+        public decimal BaseAmount { get; set; }
+
+        public decimal AgencyPercent { get; set; }
+        public decimal GajPercent { get; set; }
+
+        public decimal AgencyAmount { get; set; }
+        public decimal GajAmount { get; set; }
+
+        public int StageTypeId { get; set; }
+        public string StageTypeName { get; set; } = string.Empty;
     }
 }

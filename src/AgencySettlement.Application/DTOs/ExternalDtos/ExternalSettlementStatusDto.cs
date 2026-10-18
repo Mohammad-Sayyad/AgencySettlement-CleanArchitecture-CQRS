@@ -1,36 +1,49 @@
-﻿using AgencySettlement.Domain.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using AgencySettlement.Application.DTOs;
+using AgencySettlement.Application.DTOs.SingleLessonDto;
+using AgencySettlement.Domain.Enums;
 
-namespace AgencySettlement.Application.DTOs.ExternalDtos
+namespace AgencySettlement.Application.DTOs.ExternalDtos;
+
+public sealed class ExternalSettlementStatusDto
 {
-    public sealed class ExternalSettlementStatusDto
-    {
-        public int AgencyId { get; set; }
+    public int AgencyId { get; set; }
 
-        public int YearId { get; set; }
+    public int YearId { get; set; }
 
-        public long SettlmentId { get; set; }
+    public long SettlmentId { get; set; }
 
-        public string PersianExecutionDate { get; set; } = string.Empty;
+    public long? SingleLessonSettlementId { get; set; }
 
-        public string PaymentDeadline { get; set; } = string.Empty;
+    public string PersianExecutionDate { get; set; } = string.Empty;
 
-        //public int Status { get; set; }
+    public string PaymentDeadline { get; set; } = string.Empty;
 
-        public string StatusTitle { get; set; } = string.Empty;
+    public string StatusTitle { get; set; } = string.Empty;
 
-        //public decimal DebtAmount { get; set; }
-        public decimal Balance { get; set; }
-        public SettlementPaymentStatus PaymentStatus { get; set; }
+    public SettlementPaymentStatus PaymentStatus { get; set; }
 
-        public List<SettlementDetailItemDto> Items { get; set; } = [];
+    // فیلد قبلی برای حفظ سازگاری خروجی
+    public decimal Balance { get; set; }
 
-        public int TotalInPersonCount { get; set; }
+    // جزئیات آزمون؛ ساختار فعلی حفظ می‌شود
+    public List<SettlementDetailItemDto> Items { get; set; } = [];
 
-        public int TotalOnlineCount { get; set; }
-    }
+    public int TotalInPersonCount { get; set; }
+
+    public int TotalOnlineCount { get; set; }
+
+    // جزئیات تک‌درس
+    public List<SingleLessonSettlementDetailItemDto>
+        SingleLessonItems
+    { get; set; } = [];
+
+    // خلاصه بدهکاری‌ها
+    public decimal ExamTotalDebit { get; set; }
+
+    public decimal SingleLessonTotalDebit { get; set; }
+
+    public decimal TotalDebit { get; set; }
+
+    // تعداد کل تک‌درس
+    public int SingleLessonTotalCourseCount { get; set; }
 }

@@ -52,36 +52,95 @@ namespace AgencySettlement.Infrastructure.External
         //        cancellationToken);
         //}
 
-  
-public async Task AddSettlementPaymentAsync(
-    SettlementPayment payment,
-    CancellationToken cancellationToken)
+
+        public async Task<long> AddSettlementPaymentAsync(
+                SettlementPayment payment,
+                CancellationToken cancellationToken)
         {
-            var settlement = await _context.Settlements
-                .FirstOrDefaultAsync(
-                    x => x.Id == payment.SettlementId,
+            if (payment.ExamAmount < 0 || payment.SingleLessonAmount < 0)
+                throw new ArgumentException("مبلغ پرداخت نمی‌تواند منفی باشد.");
+
+            if (payment.ExamAmount + payment.SingleLessonAmount <= 0)
+                throw new ArgumentException("مبلغ پرداخت باید بیشتر از صفر باشد.");
+
+            await using var transaction =
+                await _context.Database.BeginTransactionAsync(cancellationToken);
+
+            // بررسی شماره پیگیری تکراری
+            var duplicateExists = await _context.SettlementPayments
+                .AnyAsync(
+                    x => x.AgencyId == payment.AgencyId
+                         && x.YearId == payment.YearId
+                         && x.TrackingNumber == payment.TrackingNumber,
                     cancellationToken);
 
-            if (settlement is null)
+            if (duplicateExists)
                 throw new InvalidOperationException(
-                    $"Settlement با شناسه {payment.SettlementId} پیدا نشد.");
+                    "این شماره پیگیری قبلاً برای این نمایندگی و سال ثبت شده است.");
 
-            if (payment.IsAppliedToSettlement)
-                return;
+            // دریافت تسویه آزمون با قفل تراکنشی در زمان به‌روزرسانی
+            var examSettlement = await _context.Settlements
+                .SingleOrDefaultAsync(
+                    x => x.Id == payment.SettlementId
+                         && x.AgencyId == payment.AgencyId
+                         && x.YearId == payment.YearId
+                         && x.PersianExecutionDate == payment.PersianExecutionDate,
+                    cancellationToken);
 
-            await _context.SettlementPayments.AddAsync(
-                payment,
-                cancellationToken);
+            if (examSettlement is null)
+                throw new KeyNotFoundException(
+                    "تسویه آزمون با اطلاعات ارسالی پیدا نشد.");
 
-            settlement.TotalCredit += payment.Amount;
+            // تسویه تک‌درس تنها در صورت وجود مبلغ تک‌درس الزامی است
+            Domain.Entities.SingleLesson.SingleLessonSettlement? singleLessonSettlement = null;
 
-            settlement.Balance =
-                settlement.TotalDebit -
-                settlement.TotalCredit;
+            if (payment.SingleLessonAmount > 0)
+            {
+                singleLessonSettlement = await _context.SingleLessonSettlements
+                    .SingleOrDefaultAsync(
+                        x => x.AgencyId == payment.AgencyId
+                             && x.YearId == payment.YearId
+                             && x.PersianExecutionDate == payment.PersianExecutionDate,
+                        cancellationToken);
+
+                if (singleLessonSettlement is null)
+                    throw new KeyNotFoundException(
+                        "تسویه تک‌درس برای نمایندگی، سال و تاریخ موردنظر پیدا نشد.");
+
+                payment.SingleLessonSettlementId = singleLessonSettlement.Id;
+            }
+            else
+            {
+                payment.SingleLessonSettlementId = null;
+            }
+
+            // محاسبه مبلغ کل در سمت سرور
+            payment.Amount = payment.ExamAmount + payment.SingleLessonAmount;
+
+            // افزایش بستانکاری آزمون فقط به اندازه مبلغ پرداختی بابت آزمون
+            examSettlement.TotalCredit += payment.ExamAmount;
+            examSettlement.Balance =
+                examSettlement.TotalDebit - examSettlement.TotalCredit;
+
+            // افزایش بستانکاری تک‌درس فقط به اندازه مبلغ پرداختی بابت تک‌درس
+            if (singleLessonSettlement is not null)
+            {
+                singleLessonSettlement.TotalCredit += payment.SingleLessonAmount;
+                singleLessonSettlement.Balance =
+                    singleLessonSettlement.TotalDebit -
+                    singleLessonSettlement.TotalCredit;
+
+                singleLessonSettlement.UpdatedAt = DateTime.UtcNow;
+            }
 
             payment.IsAppliedToSettlement = true;
 
+            _context.SettlementPayments.Add(payment);
+
             await _context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+
+            return payment.Id;
         }
 
 

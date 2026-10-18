@@ -8,12 +8,14 @@ using System.Threading.Tasks;
 namespace AgencySettlement.Application.ExternalExamsFeatures.Commands.CreateSettlementPaymentCommand
 {
     public sealed record CreateSettlementPaymentCommand(
-    long SettlementId,
-    int AgencyId,
-    int YearId,
-    string PersianExecutionDate,
-    decimal Amount,
-    string PaymentDate,
-    string TrackingNumber
-) : IRequest<CreateSettlementPaymentResponse>;
+     long SettlementId,
+     int AgencyId,
+     int YearId,
+     string PersianExecutionDate,
+     decimal ExamAmount,
+     decimal SingleLessonAmount,
+     decimal Amount,
+     string PaymentDate,
+     string TrackingNumber
+ ) : IRequest<CreateSettlementPaymentResponse>;
 }
