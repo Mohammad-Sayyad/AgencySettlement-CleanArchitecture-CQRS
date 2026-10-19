@@ -66,6 +66,7 @@ public sealed class CreateSettlementPaymentCommandHandler
             YearId = request.YearId,
             PersianExecutionDate = request.PersianExecutionDate,
             ExamAmount = request.ExamAmount,
+            SingleLessonSettlementId = request.SingleLessonSettlementId,
             SingleLessonAmount = request.SingleLessonAmount,
             Amount = amount,
             PaymentDate = request.PaymentDate,

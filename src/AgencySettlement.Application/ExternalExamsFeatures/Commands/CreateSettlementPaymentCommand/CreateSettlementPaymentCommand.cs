@@ -9,6 +9,7 @@ namespace AgencySettlement.Application.ExternalExamsFeatures.Commands.CreateSett
 {
     public sealed record CreateSettlementPaymentCommand(
      long SettlementId,
+     long SingleLessonSettlementId,
      int AgencyId,
      int YearId,
      string PersianExecutionDate,

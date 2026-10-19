@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace AgencySettlement.Infrastructure;
@@ -37,6 +38,18 @@ public static class DependencyInjection
                 configuration.GetConnectionString("AgencySettlementDb"));
         });
 
+        //services.AddDbContext<AgencySettlementDbContext>(options =>
+        //{
+        //    options.UseSqlServer(
+        //        configuration.GetConnectionString("AgencySettlementDb"));
+
+        //    options.LogTo(
+        //        message => System.Diagnostics.Debug.WriteLine(message),
+        //        new[] { DbLoggerCategory.Database.Command.Name },
+        //        LogLevel.Information);
+
+        //    options.EnableDetailedErrors();
+        //});
         services.AddHttpContextAccessor();
 
         services.AddScoped<ICurrentUserService, CurrentUserService>();

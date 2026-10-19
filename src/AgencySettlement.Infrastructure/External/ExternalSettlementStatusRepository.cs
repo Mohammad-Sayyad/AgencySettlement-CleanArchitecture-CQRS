@@ -194,80 +194,147 @@ public sealed class ExternalSettlementStatusRepository
         // Single lesson items
         // -----------------------------------------
 
-        var singleLessonItems = await (
-            from item in _context.SingleLessonSettlementItems.AsNoTracking()
+        var singleLessonRows = await (
+     from item in _context.SingleLessonSettlementItems.AsNoTracking()
 
-            join package in _context.Packages.AsNoTracking()
-                on item.PackageId equals package.Id
+     join package in _context.Packages.AsNoTracking()
+         on item.PackageId equals package.Id
 
-            join educationalLevel in _context.EducationalLevels.AsNoTracking()
-                on item.EducationalLevelId equals educationalLevel.Id
+     join educationalLevel in _context.EducationalLevels.AsNoTracking()
+         on item.EducationalLevelId equals educationalLevel.Id
 
-            join studyField in _context.StudyFields.AsNoTracking()
-                on item.StudyFieldId equals studyField.Id
+     join studyField in _context.StudyFields.AsNoTracking()
+         on item.StudyFieldId equals studyField.Id
 
-            join examMode in _context.ExamModes.AsNoTracking()
-                on item.ExamModeId equals examMode.Id
+     join examMode in _context.ExamModes.AsNoTracking()
+         on item.ExamModeId equals examMode.Id
 
-            join registrationPlan in _context.RegistrationPlans.AsNoTracking()
-                on item.RegistrationPlanId equals registrationPlan.Id
+     join registrationPlan in _context.RegistrationPlans.AsNoTracking()
+         on item.RegistrationPlanId equals registrationPlan.Id
 
-            where item.AgencyId == agencyId
-                  && item.YearId == yearId
-                  && item.PersianExecutionDate == persianExecutionDate
+     where item.AgencyId == agencyId
+           && item.YearId == yearId
+           && item.PersianExecutionDate == persianExecutionDate
 
-            orderby item.EducationalLevelId,
-                    item.StudyFieldId,
-                    item.CourseId
+     select new SingleLessonSettlementDetailItemDto
+     {
+         // شناسه رکورد دیگر مبنای تجمیع نیست.
+         SettlementId = item.SettlementId,
 
-            select new SingleLessonSettlementDetailItemDto
+         CourseId = item.CourseId,
+
+         CourseName = _context.SingleLessons
+             .Where(course =>
+                 course.YearId == item.YearId &&
+                 course.CourseId == item.CourseId &&
+                 course.StudyFieldId == item.StudyFieldId &&
+                 course.EducationalLevelId == item.EducationalLevelId &&
+                 course.PackageId == item.PackageId)
+             .Select(course => course.CourseName)
+             .FirstOrDefault() ?? string.Empty,
+
+         PackageId = item.PackageId,
+         PackageName = package.Name,
+
+         EducationalLevelId = item.EducationalLevelId,
+         EducationalLevelName = educationalLevel.Name,
+
+         StudyFieldId = item.StudyFieldId,
+         StudyFieldName = studyField.Name,
+
+         ExamModeId = item.ExamModeId,
+         ExamModeName = examMode.Name,
+
+         RegistrationPlanId = item.RegistrationPlanId,
+         RegistrationPlanName = registrationPlan.Name,
+
+         Quantity = item.Quantity,
+
+         UnitPrice = item.UnitPrice,
+         BaseAmount = item.BaseAmount,
+
+         AgencyPercent = item.AgencyPercent,
+         GajPercent = item.GajPercent,
+
+         AgencyAmount = item.AgencyAmount,
+         GajAmount = item.GajAmount,
+
+         DebitAmount = item.DebitAmount
+     }
+ ).ToListAsync(cancellationToken);
+
+        // تجمیع رکوردهای همسان
+        var singleLessonItems = singleLessonRows
+            .GroupBy(item => new
             {
-                Id = item.Id,
-                SettlementId = item.SettlementId,
+                item.SettlementId,
 
-                CourseId = item.CourseId,
+                item.CourseId,
+                item.CourseName,
 
-                // Subquery برای جلوگیری از تکثیر ردیف‌ها
-                // در صورت وجود چند رکورد همسان در SingleLessons
-                CourseName = _context.SingleLessons
-                    .Where(course =>
-                        course.YearId == item.YearId &&
-                        course.CourseId == item.CourseId &&
-                        course.StudyFieldId == item.StudyFieldId &&
-                        course.EducationalLevelId == item.EducationalLevelId &&
-                        course.PackageId == item.PackageId)
-                    .Select(course => course.CourseName)
-                    .FirstOrDefault() ?? string.Empty,
+                item.PackageId,
+                item.PackageName,
 
-                PackageId = item.PackageId,
-                PackageName = package.Name,
+                item.EducationalLevelId,
+                item.EducationalLevelName,
 
-                EducationalLevelId = item.EducationalLevelId,
-                EducationalLevelName = educationalLevel.Name,
+                item.StudyFieldId,
+                item.StudyFieldName,
 
-                StudyFieldId = item.StudyFieldId,
-                StudyFieldName = studyField.Name,
+                item.ExamModeId,
+                item.ExamModeName,
 
-                ExamModeId = item.ExamModeId,
-                ExamModeName = examMode.Name,
+                item.RegistrationPlanId,
+                item.RegistrationPlanName,
 
-                RegistrationPlanId = item.RegistrationPlanId,
-                RegistrationPlanName = registrationPlan.Name,
+                // جلوگیری از ادغام ردیف‌هایی با شرایط مالی متفاوت
+                item.UnitPrice,
+                item.AgencyPercent,
+                item.GajPercent
+            })
+            .Select(group => new SingleLessonSettlementDetailItemDto
+            {
+                SettlementId = group.Key.SettlementId,
 
-                Quantity = item.Quantity,
+                CourseId = group.Key.CourseId,
+                CourseName = group.Key.CourseName,
 
-                UnitPrice = item.UnitPrice,
-                BaseAmount = item.BaseAmount,
+                PackageId = group.Key.PackageId,
+                PackageName = group.Key.PackageName,
 
-                AgencyPercent = item.AgencyPercent,
-                GajPercent = item.GajPercent,
+                EducationalLevelId = group.Key.EducationalLevelId,
+                EducationalLevelName = group.Key.EducationalLevelName,
 
-                AgencyAmount = item.AgencyAmount,
-                GajAmount = item.GajAmount,
+                StudyFieldId = group.Key.StudyFieldId,
+                StudyFieldName = group.Key.StudyFieldName,
 
-                DebitAmount = item.DebitAmount
-            }
-        ).ToListAsync(cancellationToken);
+                ExamModeId = group.Key.ExamModeId,
+                ExamModeName = group.Key.ExamModeName,
+
+                RegistrationPlanId = group.Key.RegistrationPlanId,
+                RegistrationPlanName = group.Key.RegistrationPlanName,
+
+                Quantity = group.Sum(item => item.Quantity),
+
+                UnitPrice = group.Key.UnitPrice,
+
+                BaseAmount = group.Sum(item => item.BaseAmount),
+
+                AgencyPercent = group.Key.AgencyPercent,
+                GajPercent = group.Key.GajPercent,
+
+                AgencyAmount = group.Sum(item => item.AgencyAmount),
+                GajAmount = group.Sum(item => item.GajAmount),
+
+                DebitAmount = group.Sum(item => item.DebitAmount)
+            })
+            .OrderBy(item => item.EducationalLevelId)
+            .ThenBy(item => item.StudyFieldId)
+            .ThenBy(item => item.CourseId)
+            .ThenBy(item => item.PackageId)
+            .ThenBy(item => item.ExamModeId)
+            .ThenBy(item => item.RegistrationPlanId)
+            .ToList();
 
         // -----------------------------------------
         // Debt summaries
