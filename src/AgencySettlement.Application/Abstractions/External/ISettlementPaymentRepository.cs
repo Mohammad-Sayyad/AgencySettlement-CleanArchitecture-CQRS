@@ -1,4 +1,5 @@
-﻿using AgencySettlement.Domain.Entities;
+﻿using AgencySettlement.Application.DTOs.ReportsDto;
+using AgencySettlement.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,5 +31,11 @@ namespace AgencySettlement.Application.Abstractions.External
     int yearId,
     string persianExecutionDate,
     CancellationToken cancellationToken);
+
+        Task<List<SettlementPaymentReportDto>> GetReportAsync(
+        int? yearId,
+        string? persianExecutionDate,
+        int? agencyId,
+        CancellationToken cancellationToken);
     }
 }

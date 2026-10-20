@@ -1,6 +1,7 @@
 ﻿using AgencySettlement.Application.DTOs.SingleLessonDto;
 using AgencySettlement.Application.Features.Queries.GetSettlementDetailsQuery;
 using AgencySettlement.Application.Features.Queries.GetSettlementFactorReportQuery;
+using AgencySettlement.Application.Features.Queries.GetSettlementPaymentsReportQuery;
 using AgencySettlement.Application.Features.Queries.GetSettlementSelectionDetailsQuery;
 using AgencySettlement.Application.Settlements.Queries.ReportQuery;
 using MediatR;
@@ -100,6 +101,23 @@ namespace AgencySettlement.API.Settlment.Controllers
             return Ok(result);
         }
 
+
+        [HttpGet("settlement/payment-report")]
+        public async Task<IActionResult> Get(
+    [FromQuery] int? yearId,
+    [FromQuery] string? persianExecutionDate,
+    [FromQuery] int? agencyId,
+    CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(
+                new GetSettlementPaymentsReportQuery(
+                    yearId,
+                    persianExecutionDate,
+                    agencyId),
+                cancellationToken);
+
+            return Ok(result);
+        }
 
         [HttpGet("settlement/selection-details")]
         public async Task<IActionResult> GetSettlementSelectionDetails(

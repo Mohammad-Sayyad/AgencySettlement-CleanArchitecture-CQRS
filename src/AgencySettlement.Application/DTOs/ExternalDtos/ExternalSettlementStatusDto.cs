@@ -22,28 +22,33 @@ public sealed class ExternalSettlementStatusDto
 
     public SettlementPaymentStatus PaymentStatus { get; set; }
 
-    // فیلد قبلی برای حفظ سازگاری خروجی
     public decimal Balance { get; set; }
 
-    // جزئیات آزمون؛ ساختار فعلی حفظ می‌شود
     public List<SettlementDetailItemDto> Items { get; set; } = [];
 
     public int TotalInPersonCount { get; set; }
 
     public int TotalOnlineCount { get; set; }
 
-    // جزئیات تک‌درس
-    public List<SingleLessonSettlementDetailItemDto>
-        SingleLessonItems
-    { get; set; } = [];
+    public List<SingleLessonSettlementDetailItemDto> SingleLessonItems { get; set; } = [];
 
-    // خلاصه بدهکاری‌ها
     public decimal ExamTotalDebit { get; set; }
+
+    public decimal ExamTotalCredit { get; set; }
+
+    public decimal ExamBalance { get; set; }
 
     public decimal SingleLessonTotalDebit { get; set; }
 
+    public decimal SingleLessonTotalCredit { get; set; }
+
+    public decimal SingleLessonBalance { get; set; }
+
     public decimal TotalDebit { get; set; }
 
-    // تعداد کل تک‌درس
+    public decimal TotalCredit { get; set; }
+
+    public decimal TotalBalance { get; set; }
+
     public int SingleLessonTotalCourseCount { get; set; }
 }
