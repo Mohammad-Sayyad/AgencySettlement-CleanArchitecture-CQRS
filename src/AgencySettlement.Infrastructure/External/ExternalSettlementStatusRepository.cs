@@ -22,15 +22,11 @@ public sealed class ExternalSettlementStatusRepository
 
 
     public async Task<ExternalSettlementStatusDto?> GetExternalSettlementStatusAsync(
-    int agencyId,
-    int yearId,
-    string persianExecutionDate,
-    CancellationToken cancellationToken)
+     int agencyId,
+     int yearId,
+     string persianExecutionDate,
+     CancellationToken cancellationToken)
     {
-        // -----------------------------------------
-        // Exam settlement
-        // -----------------------------------------
-
         var settlement = await _context.Settlements
             .AsNoTracking()
             .Where(x =>
@@ -45,135 +41,94 @@ public sealed class ExternalSettlementStatusRepository
                 x.Balance,
                 x.YearId,
                 x.PersianExecutionDate,
-                x.TotalDebit
+                x.TotalDebit,
+                x.TotalCredit
             })
             .FirstOrDefaultAsync(cancellationToken);
 
-        // -----------------------------------------
-        // Single lesson settlement
-        // -----------------------------------------
+        var singleLessonSettlement = await _context.SingleLessonSettlements
+            .AsNoTracking()
+            .Where(x =>
+                x.AgencyId == agencyId &&
+                x.YearId == yearId &&
+                x.PersianExecutionDate == persianExecutionDate)
+            .OrderByDescending(x => x.Id)
+            .Select(x => new
+            {
+                x.Id,
+                x.TotalDebit,
+                x.TotalCredit,
+                x.Balance,
+                x.TotalCourseCount
+            })
+            .FirstOrDefaultAsync(cancellationToken);
 
-        var singleLessonSettlement =
-            await _context.SingleLessonSettlements
-                .AsNoTracking()
-                .Where(x =>
-                    x.AgencyId == agencyId &&
-                    x.YearId == yearId &&
-                    x.PersianExecutionDate == persianExecutionDate)
-                .OrderByDescending(x => x.Id)
-                .Select(x => new
-                {
-                    x.Id,
-                    x.TotalDebit,
-                    x.TotalCourseCount
-                })
-                .FirstOrDefaultAsync(cancellationToken);
-
-        // اگر هیچ‌کدام از تسویه‌ها وجود نداشته باشند،
-        // وضعیت تسویه‌ای برای برگرداندن نداریم.
         if (settlement == null && singleLessonSettlement == null)
             return null;
 
-        // -----------------------------------------
-        // Exam items
-        // منطق و محاسبات قبلی آزمون حفظ شده است.
-        // -----------------------------------------
-
         var items = await (
             from item in _context.SettlementOrderItems.AsNoTracking()
-
             join order in _context.SettlementOrders.AsNoTracking()
                 on item.SettlementOrderId equals order.Id
-
             join package in _context.Packages.AsNoTracking()
                 on item.PackageId equals package.Id
-
             join educationalLevel in _context.EducationalLevels.AsNoTracking()
                 on item.EducationalLevelId equals educationalLevel.Id
-
             join studyField in _context.StudyFields.AsNoTracking()
                 on item.StudyFieldId equals studyField.Id
-
             join examMode in _context.ExamModes.AsNoTracking()
                 on item.ExamModeId equals examMode.Id
-
             join agency in _context.Agencies.AsNoTracking()
                 on item.AgencyId equals agency.Id
-
             join yearType in _context.YearTypes.AsNoTracking()
                 on item.YearId equals yearType.Id
-
             join registrationPlan in _context.RegistrationPlans.AsNoTracking()
                 on item.RegistrationPlanId equals registrationPlan.Id
-
             where item.AgencyId == agencyId
                   && item.YearId == yearId
                   && item.PersianExecutionDate == persianExecutionDate
-
             orderby item.ExamModeId,
                     item.EducationalLevelId,
                     item.StudyFieldId
-
             select new SettlementDetailItemDto
             {
                 SettlementItemId = item.Id,
                 SettlementId = order.Id,
-
                 PackageId = item.PackageId,
                 PackageName = package.Name,
-
                 ExamModeId = item.ExamModeId,
                 ExamModeName = examMode.Name,
-
                 AgencyName = agency.Name,
                 YearName = yearType.Name,
                 DetailCode = agency.DetailCode,
-
                 EducationalLevelId = item.EducationalLevelId,
                 EducationalLevelName = educationalLevel.Name,
-
                 RegistrationPlanId = item.RegistrationPlanId,
                 RegistrationPlanName = registrationPlan.Name,
-
                 StudyFieldId = item.StudyFieldId,
                 StudyFieldName = studyField.Name,
-
                 CandidateCount = item.CandidateCount,
                 FreeCandidateCount = item.FreeCandidateCount,
                 PaidCandidateCount = item.PaidCandidateCount,
-
                 UnitPrice = item.UnitPrice,
                 BaseAmount = item.BaseAmount,
-
                 DiscountPercent = item.GajPercent,
-
-                DiscountAmount =
-                    item.BaseAmount * item.GajPercent / 100m,
-
+                DiscountAmount = item.BaseAmount * item.GajPercent / 100m,
                 AgencyPercent = item.AgencyPercent,
-
                 AgencyAmount = item.AgencyAmount,
                 GajAmount = item.GajAmount,
                 StudentAmount = item.StudentAmount,
-
                 DebitAmount = item.DebitAmount,
                 CreditAmount = item.CreditAmount,
-
-                TotalAmount =
-                    item.BaseAmount -
-                    (item.BaseAmount * item.GajPercent / 100m)
+                TotalAmount = item.BaseAmount -
+                              (item.BaseAmount * item.GajPercent / 100m)
             }
         ).ToListAsync(cancellationToken);
 
-        // همان محاسبه قبلی عنوان ردیف‌های آزمون
         foreach (var item in items)
         {
-            item.StageTypeId =
-                GetStageTypeId(item.EducationalLevelId);
-
-            item.StageTypeName =
-                GetStageTypeName(item.EducationalLevelId);
-
+            item.StageTypeId = GetStageTypeId(item.EducationalLevelId);
+            item.StageTypeName = GetStageTypeName(item.EducationalLevelId);
             item.Title =
                 $"{item.ExamModeName} - " +
                 $"{item.StageTypeName} - " +
@@ -181,7 +136,6 @@ public sealed class ExternalSettlementStatusRepository
                 $"رشته {item.StudyFieldName}";
         }
 
-        // همان تعدادهای قبلی آزمون؛ تغییری در منطق نیست.
         var totalInPersonCount = items
             .Where(x => x.ExamModeId == 0)
             .Sum(x => x.CandidateCount);
@@ -190,104 +144,71 @@ public sealed class ExternalSettlementStatusRepository
             .Where(x => x.ExamModeId == 1)
             .Sum(x => x.CandidateCount);
 
-        // -----------------------------------------
-        // Single lesson items
-        // -----------------------------------------
-
         var singleLessonRows = await (
-     from item in _context.SingleLessonSettlementItems.AsNoTracking()
+            from item in _context.SingleLessonSettlementItems.AsNoTracking()
+            join package in _context.Packages.AsNoTracking()
+                on item.PackageId equals package.Id
+            join educationalLevel in _context.EducationalLevels.AsNoTracking()
+                on item.EducationalLevelId equals educationalLevel.Id
+            join studyField in _context.StudyFields.AsNoTracking()
+                on item.StudyFieldId equals studyField.Id
+            join examMode in _context.ExamModes.AsNoTracking()
+                on item.ExamModeId equals examMode.Id
+            join registrationPlan in _context.RegistrationPlans.AsNoTracking()
+                on item.RegistrationPlanId equals registrationPlan.Id
+            where item.AgencyId == agencyId
+                  && item.YearId == yearId
+                  && item.PersianExecutionDate == persianExecutionDate
+            select new SingleLessonSettlementDetailItemDto
+            {
+                SettlementId = item.SettlementId,
+                CourseId = item.CourseId,
+                CourseName = _context.SingleLessons
+                    .Where(course =>
+                        course.YearId == item.YearId &&
+                        course.CourseId == item.CourseId &&
+                        course.StudyFieldId == item.StudyFieldId &&
+                        course.EducationalLevelId == item.EducationalLevelId &&
+                        course.PackageId == item.PackageId)
+                    .Select(course => course.CourseName)
+                    .FirstOrDefault() ?? string.Empty,
+                PackageId = item.PackageId,
+                PackageName = package.Name,
+                EducationalLevelId = item.EducationalLevelId,
+                EducationalLevelName = educationalLevel.Name,
+                StudyFieldId = item.StudyFieldId,
+                StudyFieldName = studyField.Name,
+                ExamModeId = item.ExamModeId,
+                ExamModeName = examMode.Name,
+                RegistrationPlanId = item.RegistrationPlanId,
+                RegistrationPlanName = registrationPlan.Name,
+                Quantity = item.Quantity,
+                UnitPrice = item.UnitPrice,
+                BaseAmount = item.BaseAmount,
+                AgencyPercent = item.AgencyPercent,
+                GajPercent = item.GajPercent,
+                AgencyAmount = item.AgencyAmount,
+                GajAmount = item.GajAmount,
+                DebitAmount = item.DebitAmount
+            }
+        ).ToListAsync(cancellationToken);
 
-     join package in _context.Packages.AsNoTracking()
-         on item.PackageId equals package.Id
-
-     join educationalLevel in _context.EducationalLevels.AsNoTracking()
-         on item.EducationalLevelId equals educationalLevel.Id
-
-     join studyField in _context.StudyFields.AsNoTracking()
-         on item.StudyFieldId equals studyField.Id
-
-     join examMode in _context.ExamModes.AsNoTracking()
-         on item.ExamModeId equals examMode.Id
-
-     join registrationPlan in _context.RegistrationPlans.AsNoTracking()
-         on item.RegistrationPlanId equals registrationPlan.Id
-
-     where item.AgencyId == agencyId
-           && item.YearId == yearId
-           && item.PersianExecutionDate == persianExecutionDate
-
-     select new SingleLessonSettlementDetailItemDto
-     {
-         // شناسه رکورد دیگر مبنای تجمیع نیست.
-         SettlementId = item.SettlementId,
-
-         CourseId = item.CourseId,
-
-         CourseName = _context.SingleLessons
-             .Where(course =>
-                 course.YearId == item.YearId &&
-                 course.CourseId == item.CourseId &&
-                 course.StudyFieldId == item.StudyFieldId &&
-                 course.EducationalLevelId == item.EducationalLevelId &&
-                 course.PackageId == item.PackageId)
-             .Select(course => course.CourseName)
-             .FirstOrDefault() ?? string.Empty,
-
-         PackageId = item.PackageId,
-         PackageName = package.Name,
-
-         EducationalLevelId = item.EducationalLevelId,
-         EducationalLevelName = educationalLevel.Name,
-
-         StudyFieldId = item.StudyFieldId,
-         StudyFieldName = studyField.Name,
-
-         ExamModeId = item.ExamModeId,
-         ExamModeName = examMode.Name,
-
-         RegistrationPlanId = item.RegistrationPlanId,
-         RegistrationPlanName = registrationPlan.Name,
-
-         Quantity = item.Quantity,
-
-         UnitPrice = item.UnitPrice,
-         BaseAmount = item.BaseAmount,
-
-         AgencyPercent = item.AgencyPercent,
-         GajPercent = item.GajPercent,
-
-         AgencyAmount = item.AgencyAmount,
-         GajAmount = item.GajAmount,
-
-         DebitAmount = item.DebitAmount
-     }
- ).ToListAsync(cancellationToken);
-
-        // تجمیع رکوردهای همسان
         var singleLessonItems = singleLessonRows
             .GroupBy(item => new
             {
                 item.SettlementId,
-
                 item.CourseId,
                 item.CourseName,
-
                 item.PackageId,
                 item.PackageName,
-
                 item.EducationalLevelId,
                 item.EducationalLevelName,
-
                 item.StudyFieldId,
                 item.StudyFieldName,
-
                 item.ExamModeId,
                 item.ExamModeName,
-
                 item.RegistrationPlanId,
                 item.RegistrationPlanName,
-
-                // جلوگیری از ادغام ردیف‌هایی با شرایط مالی متفاوت
                 item.UnitPrice,
                 item.AgencyPercent,
                 item.GajPercent
@@ -295,37 +216,25 @@ public sealed class ExternalSettlementStatusRepository
             .Select(group => new SingleLessonSettlementDetailItemDto
             {
                 SettlementId = group.Key.SettlementId,
-
                 CourseId = group.Key.CourseId,
                 CourseName = group.Key.CourseName,
-
                 PackageId = group.Key.PackageId,
                 PackageName = group.Key.PackageName,
-
                 EducationalLevelId = group.Key.EducationalLevelId,
                 EducationalLevelName = group.Key.EducationalLevelName,
-
                 StudyFieldId = group.Key.StudyFieldId,
                 StudyFieldName = group.Key.StudyFieldName,
-
                 ExamModeId = group.Key.ExamModeId,
                 ExamModeName = group.Key.ExamModeName,
-
                 RegistrationPlanId = group.Key.RegistrationPlanId,
                 RegistrationPlanName = group.Key.RegistrationPlanName,
-
                 Quantity = group.Sum(item => item.Quantity),
-
                 UnitPrice = group.Key.UnitPrice,
-
                 BaseAmount = group.Sum(item => item.BaseAmount),
-
                 AgencyPercent = group.Key.AgencyPercent,
                 GajPercent = group.Key.GajPercent,
-
                 AgencyAmount = group.Sum(item => item.AgencyAmount),
                 GajAmount = group.Sum(item => item.GajAmount),
-
                 DebitAmount = group.Sum(item => item.DebitAmount)
             })
             .OrderBy(item => item.EducationalLevelId)
@@ -336,76 +245,65 @@ public sealed class ExternalSettlementStatusRepository
             .ThenBy(item => item.RegistrationPlanId)
             .ToList();
 
-        // -----------------------------------------
-        // Debt summaries
-        // -----------------------------------------
-
         var examTotalDebit = settlement?.TotalDebit ?? 0m;
+        var examTotalCredit = settlement?.TotalCredit ?? 0m;
+        var examBalance = settlement?.Balance ?? 0m;
 
-        var singleLessonTotalDebit =
-            singleLessonSettlement?.TotalDebit ?? 0m;
+        var singleLessonTotalDebit = singleLessonSettlement?.TotalDebit ?? 0m;
+        var singleLessonTotalCredit = singleLessonSettlement?.TotalCredit ?? 0m;
+        var singleLessonBalance = singleLessonSettlement?.Balance ?? 0m;
 
-        var totalDebit =
-            examTotalDebit + singleLessonTotalDebit;
+        var totalDebit = examTotalDebit + singleLessonTotalDebit;
+        var totalCredit = examTotalCredit + singleLessonTotalCredit;
+        var totalBalance = examBalance + singleLessonBalance;
 
-        // تعداد تک‌درس از ردیف‌های واقعی محاسبه می‌شود.
-        var singleLessonTotalCourseCount =
-            singleLessonItems.Sum(x => x.Quantity);
-
-        // -----------------------------------------
-        // Payment status
-        // -----------------------------------------
+        var singleLessonTotalCourseCount = singleLessonItems.Sum(x => x.Quantity);
 
         var paymentStartDate =
             settlement?.PersianExecutionDate ?? persianExecutionDate;
 
-        var paymentDeadlineDate = AddDays(
-            paymentStartDate,
-            4);
+        var paymentDeadlineDate = AddDays(paymentStartDate, 4);
 
         var paymentStatus = CalculateStatus(
             paymentStartDate,
             paymentDeadlineDate);
 
-        // -----------------------------------------
-        // Response
-        // -----------------------------------------
-
         return new ExternalSettlementStatusDto
         {
             AgencyId = agencyId,
             YearId = yearId,
-
             SettlmentId = settlement?.Id ?? 0L,
-
-            SingleLessonSettlementId =
-                singleLessonSettlement?.Id,
-
+            SingleLessonSettlementId = singleLessonSettlement?.Id,
             PersianExecutionDate = paymentStartDate,
             PaymentDeadline = paymentDeadlineDate,
             PaymentStatus = paymentStatus,
 
-            // فیلد قدیمی؛ مقدار آزمون حفظ می‌شود.
-            Balance = settlement?.Balance ?? 0m,
+            Balance = examBalance,
 
-            // جزئیات آزمون
             Items = items,
             TotalInPersonCount = totalInPersonCount,
             TotalOnlineCount = totalOnlineCount,
 
-            // جزئیات تک‌درس
             SingleLessonItems = singleLessonItems,
 
-            // فقط بدهکاری‌ها
             ExamTotalDebit = examTotalDebit,
-            SingleLessonTotalDebit = singleLessonTotalDebit,
-            TotalDebit = totalDebit,
+            ExamTotalCredit = examTotalCredit,
+            ExamBalance = examBalance,
 
-            // تعداد تک‌درس
-            SingleLessonTotalCourseCount =
-                singleLessonTotalCourseCount
+            SingleLessonTotalDebit = singleLessonTotalDebit,
+            SingleLessonTotalCredit = singleLessonTotalCredit,
+            SingleLessonBalance = singleLessonBalance,
+
+            TotalDebit = totalDebit,
+            TotalCredit = totalCredit,
+            TotalBalance = totalBalance,
+
+            SingleLessonTotalCourseCount = singleLessonTotalCourseCount
         };
     }
+
+
+
     //public async Task<ExternalSettlementStatusDto?> GetExternalSettlementStatusAsync(
     //int agencyId,
     //int yearId,

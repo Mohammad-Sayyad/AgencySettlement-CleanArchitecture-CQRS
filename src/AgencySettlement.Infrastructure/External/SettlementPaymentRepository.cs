@@ -1,4 +1,5 @@
 ﻿using AgencySettlement.Application.Abstractions.External;
+using AgencySettlement.Application.DTOs.ReportsDto;
 using AgencySettlement.Domain.Entities;
 using AgencySettlement.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -178,6 +179,66 @@ namespace AgencySettlement.Infrastructure.External
                     cancellationToken);
         }
 
+
+        public async Task<List<SettlementPaymentReportDto>> GetReportAsync(
+        int? yearId,
+        string? persianExecutionDate,
+        int? agencyId,
+        CancellationToken cancellationToken)
+        {
+            var query =
+                from payment in _context.SettlementPayments.AsNoTracking()
+                join agency in _context.Agencies.AsNoTracking()
+                    on payment.AgencyId equals agency.Id
+                select new { payment, agency };
+
+            if (yearId.HasValue)
+            {
+                query = query.Where(
+                    x => x.payment.YearId == yearId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(persianExecutionDate))
+            {
+                query = query.Where(
+                    x => x.payment.PersianExecutionDate
+                        == persianExecutionDate);
+            }
+
+            if (agencyId.HasValue)
+            {
+                query = query.Where(
+                    x => x.payment.AgencyId == agencyId.Value);
+            }
+
+            return await query
+                .OrderByDescending(x => x.payment.YearId)
+                .ThenByDescending(x => x.payment.PaymentDate)
+                .ThenByDescending(x => x.payment.Id)
+                .Select(x => new SettlementPaymentReportDto
+                {
+                    PaymentId = x.payment.Id,
+                    AgencyId = x.payment.AgencyId,
+                    AgencyName = x.agency.Name,
+                    DetailCode = x.agency.DetailCode,
+
+                    YearId = x.payment.YearId,
+                    PersianExecutionDate = x.payment.PersianExecutionDate,
+                    PaymentDate = x.payment.PaymentDate,
+                    TrackingNumber = x.payment.TrackingNumber,
+
+                    ExamAmount = x.payment.ExamAmount,
+                    SingleLessonAmount = x.payment.SingleLessonAmount,
+
+                    TotalPaymentAmount =
+                        x.payment.ExamAmount
+                        + x.payment.SingleLessonAmount,
+
+                    Amount = x.payment.Amount,
+                    IsAppliedToSettlement = x.payment.IsAppliedToSettlement
+                })
+                .ToListAsync(cancellationToken);
+        }
 
     }
 
